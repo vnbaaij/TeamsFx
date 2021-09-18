@@ -35,6 +35,7 @@ export interface Solution {
 
   executeUserTask?: (func: Func, ctx: SolutionContext) => Promise<Result<any, FxError>>;
 
+  migrate?: (ctx: SolutionContext) => Promise<Result<any, FxError>>;
   /**
    * For grant and check permission in remote collaboration
    */
@@ -43,4 +44,10 @@ export interface Solution {
   checkPermission?: (ctx: SolutionContext) => Promise<Result<any, FxError>>;
 
   listCollaborator?: (ctx: SolutionContext) => Promise<Result<any, FxError>>;
+
+  /**
+   * for env management
+   */
+  createEnv?: (ctx: SolutionContext) => Promise<Result<any, FxError>>;
+  activateEnv?: (ctx: SolutionContext) => Promise<Result<any, FxError>>;
 }

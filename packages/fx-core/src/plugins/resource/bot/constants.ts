@@ -1,9 +1,8 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
-
-import { WayToRegisterBot } from "./enums/wayToRegisterBot";
 import { OptionItem, ConfigFolderName } from "@microsoft/teamsfx-api";
 import { ProgrammingLanguage } from "./enums/programmingLanguage";
+import path from "path";
 
 export class RegularExprs {
   public static readonly CHARS_TO_BE_SKIPPED: RegExp = /[^a-zA-Z0-9]/g;
@@ -71,11 +70,15 @@ export class ProgressBarConstants {
   public static readonly DEPLOY_STEP_ZIP_DEPLOY = "Uploading application package.";
 
   public static readonly DEPLOY_STEPS_NUM: number = 3;
+
+  // for the use of migrating v1 project
+  public static readonly MIGRATE_V1_PROJECT_TITLE = "Migrating Bot";
+  public static readonly MIGRATE_V1_PROJECT_STEP_MIGRATE = "Migrating Bot project.";
+  public static readonly MIGRATE_V1_PROJECT_STEPS_NUM: number = 1;
 }
 
 export class QuestionNames {
   public static readonly PROGRAMMING_LANGUAGE = "programming-language";
-  public static readonly WAY_TO_REGISTER_BOT = "way-to-register-bot";
   public static readonly GET_BOT_ID = "bot-id";
   public static readonly GET_BOT_PASSWORD = "bot-password";
   public static readonly CAPABILITIES = "capabilities";
@@ -97,6 +100,8 @@ export class LifecycleFuncNames {
   public static readonly LOCAL_DEBUG = "local-debug";
   public static readonly POST_LOCAL_DEBUG = "post-local-debug";
 
+  public static readonly GENERATE_ARM_TEMPLATES = "generate-arm-templates";
+
   // extra
   public static readonly PROVISION_WEB_APP = "provisionWebApp";
   public static readonly UPDATE_MESSAGE_ENDPOINT_AZURE = "updateMessageEndpointOnAzure";
@@ -105,6 +110,9 @@ export class LifecycleFuncNames {
   public static readonly CREATE_NEW_BOT_REG_AZURE = "createNewBotRegistrationOnAzure";
   public static readonly CREATE_NEW_BOT_REG_APPSTUDIO = "createNewBotRegistrationOnAppStudio";
   public static readonly CHECK_AAD_APP = "checkAADApp";
+
+  // for the use of migrating v1 project
+  public static readonly MIGRATE_V1_PROJECT = "migrateV1Project";
 }
 
 export class Retry {
@@ -150,17 +158,6 @@ export class Alias {
 }
 
 export class QuestionOptions {
-  public static readonly WAY_TO_REGISTER_BOT_OPTIONS: OptionItem[] = [
-    {
-      id: WayToRegisterBot.CreateNew,
-      label: "Create a new bot registration",
-    },
-    {
-      id: WayToRegisterBot.ReuseExisting,
-      label: "Use an existing bot registration",
-    },
-  ];
-
   public static readonly PROGRAMMING_LANGUAGE_OPTIONS: OptionItem[] = Object.values(
     ProgrammingLanguage
   ).map((value) => {
@@ -260,4 +257,26 @@ export class TelemetryValues {
 
 export class AzureConstants {
   public static readonly requiredResourceProviders = ["Microsoft.Web", "Microsoft.BotService"];
+}
+
+export class PathInfo {
+  public static readonly BicepTemplateRelativeDir = path.join(
+    "plugins",
+    "resource",
+    "bot",
+    "bicep"
+  );
+  public static readonly provisionModuleTemplateFileName = "botProvision.template.bicep";
+  public static readonly configurationModuleTemplateFileName = "botConfiguration.template.bicep";
+}
+
+export class BotArmOutput {
+  static readonly WebAppSKU = "bot_webAppSKU";
+  static readonly ServiceSKU = "bot_serviceSKU";
+  static readonly WebAppName = "bot_webAppName";
+  static readonly Domain = "bot_domain";
+  static readonly AppServicePlanName = "bot_appServicePlanName";
+  static readonly BotServiceName = "bot_serviceName";
+  static readonly WebAppEndpoint = "bot_webAppEndpoint";
+  static readonly InitiateLoginEndpoint = "bot_initiateLoginEndpoint";
 }

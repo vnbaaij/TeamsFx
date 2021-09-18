@@ -13,7 +13,7 @@ import {
 } from "./extTelemetryEvents";
 import * as extensionPackage from "../../package.json";
 import { FxError, Stage, UserError } from "@microsoft/teamsfx-api";
-import { getTeamsAppId } from "../utils/commonUtils";
+import { getIsExistingUser, getTeamsAppId } from "../utils/commonUtils";
 
 export namespace ExtTelemetry {
   export let reporter: VSCodeTelemetryReporter;
@@ -44,6 +44,8 @@ export namespace ExtTelemetry {
     switch (stage) {
       case Stage.create:
         return TelemetryEvent.CreateProject;
+      case Stage.migrateV1:
+        return TelemetryEvent.MigrateV1Project;
       case Stage.update:
         return TelemetryEvent.AddResource;
       case Stage.provision:
@@ -52,6 +54,10 @@ export namespace ExtTelemetry {
         return TelemetryEvent.Deploy;
       case Stage.publish:
         return TelemetryEvent.Publish;
+      case Stage.createEnv:
+        return TelemetryEvent.CreateNewEnvironment;
+      case Stage.grantPermission:
+        return TelemetryEvent.GrantPermission;
       default:
         return undefined;
     }
@@ -73,6 +79,9 @@ export namespace ExtTelemetry {
 
     properties[TelemetryProperty.AapId] = getTeamsAppId();
 
+    const isExistingUser = getIsExistingUser();
+    properties[TelemetryProperty.IsExistingUser] = isExistingUser ? isExistingUser : "";
+
     reporter.sendTelemetryEvent(eventName, properties, measurements);
   }
 
@@ -93,6 +102,9 @@ export namespace ExtTelemetry {
 
     properties[TelemetryProperty.AapId] = getTeamsAppId();
 
+    const isExistingUser = getIsExistingUser();
+    properties[TelemetryProperty.IsExistingUser] = isExistingUser ? isExistingUser : "";
+
     properties[TelemetryProperty.Success] = TelemetrySuccess.No;
     if (error instanceof UserError) {
       properties[TelemetryProperty.ErrorType] = TelemetryErrorType.UserError;
@@ -101,7 +113,9 @@ export namespace ExtTelemetry {
     }
 
     properties[TelemetryProperty.ErrorCode] = `${error.source}.${error.name}`;
-    properties[TelemetryProperty.ErrorMessage] = error.message;
+    properties[TelemetryProperty.ErrorMessage] = `${error.message}${
+      error.stack ? "\nstack:\n" + error.stack : ""
+    }`;
 
     reporter.sendTelemetryErrorEvent(eventName, properties, measurements, errorProps);
   }
@@ -120,6 +134,9 @@ export namespace ExtTelemetry {
     }
 
     properties[TelemetryProperty.AapId] = getTeamsAppId();
+
+    const isExistingUser = getIsExistingUser();
+    properties[TelemetryProperty.IsExistingUser] = isExistingUser ? isExistingUser : "";
 
     reporter.sendTelemetryException(error, properties, measurements);
   }

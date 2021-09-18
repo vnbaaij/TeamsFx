@@ -14,12 +14,14 @@ import Provision from "./provision";
 import Deploy from "./deploy";
 import Init from "./init";
 import Publish from "./publish";
-import Build from "./build";
+import Package from "./package";
 import Validate from "./validate";
 import Config from "./config";
 import Preview from "./preview/preview";
 import { isRemoteCollaborationEnabled } from "../utils";
 import Permission from "./permission";
+import { isMultiEnvEnabled } from "@microsoft/teamsfx-core";
+import Env from "./env";
 
 export const commands: YargsCommand[] = [
   new Account(),
@@ -29,12 +31,16 @@ export const commands: YargsCommand[] = [
   new Provision(),
   new Deploy(),
   new Init(),
-  new Build(),
+  new Package(),
   new Validate(),
   new Publish(),
   new Config(),
   new Preview(),
 ];
+
+if (isMultiEnvEnabled()) {
+  commands.push(new Env());
+}
 
 /**
  * Registers cli and partner commands with yargs.

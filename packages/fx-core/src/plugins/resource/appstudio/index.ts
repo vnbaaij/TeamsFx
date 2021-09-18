@@ -2,11 +2,9 @@
 // Licensed under the MIT license.
 
 import {
-  ConfigFolderName,
   FxError,
   ok,
   err,
-  LogProvider,
   Platform,
   Plugin,
   PluginContext,
@@ -16,24 +14,22 @@ import {
   TeamsAppManifest,
   SystemError,
   UserError,
-  ProjectSettings,
   Colors,
   AzureSolutionSettings,
   Func,
-  newUserError,
-  newSystemError,
+  Void,
 } from "@microsoft/teamsfx-api";
 import { AppStudioPluginImpl } from "./plugin";
 import { Constants } from "./constants";
-import { IAppDefinition } from "./interfaces/IAppDefinition";
 import { AppStudioError } from "./errors";
 import { AppStudioResultFactory } from "./results";
 import { manuallySubmitOption, autoPublishOption } from "./questions";
 import { TelemetryUtils, TelemetryEventName, TelemetryPropertyKey } from "./utils/telemetry";
 import { Service } from "typedi";
 import { ResourcePlugins } from "../../solution/fx-solution/ResourcePluginContainer";
-import { FunctionRouterError } from "../../../core";
 import { Links } from "../bot/constants";
+import { ResourcePermission, TeamsAppAdmin } from "../../../common/permissionInterface";
+import "./v2";
 @Service(ResourcePlugins.AppStudioPlugin)
 export class AppStudioPlugin implements Plugin {
   name = "fx-resource-appstudio";
@@ -52,22 +48,7 @@ export class AppStudioPlugin implements Plugin {
     });
 
     if (stage === Stage.publish) {
-      if (ctx.answers?.platform === Platform.VS) {
-        const appPath = new QTreeNode({
-          type: "folder",
-          name: Constants.PUBLISH_PATH_QUESTION,
-          title: "Please select the folder contains manifest.json and icons",
-          default: `${ctx.root}/.${ConfigFolderName}`,
-        });
-        appStudioQuestions.addChild(appPath);
-
-        const remoteTeamsAppId = new QTreeNode({
-          type: "text",
-          name: Constants.REMOTE_TEAMS_APP_ID,
-          title: "Please input the teams app id in App Studio",
-        });
-        appStudioQuestions.addChild(remoteTeamsAppId);
-      } else if (ctx.answers?.platform === Platform.VSCode) {
+      if (ctx.answers?.platform === Platform.VSCode) {
         const buildOrPublish = new QTreeNode({
           name: Constants.BUILD_OR_PUBLISH_QUESTION,
           type: "singleSelect",
@@ -100,8 +81,16 @@ export class AppStudioPlugin implements Plugin {
    * @returns {string} - Remote teams app id
    */
   public async provision(ctx: PluginContext): Promise<Result<string, FxError>> {
+    TelemetryUtils.init(ctx);
+    TelemetryUtils.sendStartEvent(TelemetryEventName.provision);
     const remoteTeamsAppId = await this.appStudioPluginImpl.provision(ctx);
-    return ok(remoteTeamsAppId);
+    if (remoteTeamsAppId.isErr()) {
+      TelemetryUtils.sendErrorEvent(TelemetryEventName.provision, remoteTeamsAppId.error);
+      return remoteTeamsAppId;
+    } else {
+      TelemetryUtils.sendSuccessEvent(TelemetryEventName.provision);
+      return ok(remoteTeamsAppId.value);
+    }
   }
 
   /**
@@ -189,9 +178,33 @@ export class AppStudioPlugin implements Plugin {
     } catch (error) {
       TelemetryUtils.sendErrorEvent(TelemetryEventName.buildTeamsPackage, error);
       return err(
-        AppStudioResultFactory.SystemError(
+        AppStudioResultFactory.UserError(
           AppStudioError.TeamsPackageBuildError.name,
           AppStudioError.TeamsPackageBuildError.message(error)
+        )
+      );
+    }
+  }
+
+  /**
+   * Migrate V1 project
+   */
+  public async migrateV1Project(ctx: PluginContext): Promise<Result<Void, FxError>> {
+    TelemetryUtils.init(ctx);
+    TelemetryUtils.sendStartEvent(TelemetryEventName.migrateV1Project);
+
+    try {
+      const v1ProjectProperties = await this.appStudioPluginImpl.migrateV1Project(ctx);
+      TelemetryUtils.sendSuccessEvent(TelemetryEventName.migrateV1Project, {
+        enableAuth: v1ProjectProperties.enableAuth ? "true" : "false",
+      });
+      return ok(Void);
+    } catch (error) {
+      TelemetryUtils.sendErrorEvent(TelemetryEventName.migrateV1Project, error);
+      return err(
+        AppStudioResultFactory.SystemError(
+          AppStudioError.MigrateV1ProjectFailedError.name,
+          AppStudioError.MigrateV1ProjectFailedError.message(error)
         )
       );
     }
@@ -224,7 +237,7 @@ export class AppStudioPlugin implements Plugin {
         } catch (error) {
           TelemetryUtils.sendErrorEvent(TelemetryEventName.publish, error);
           return err(
-            AppStudioResultFactory.SystemError(
+            AppStudioResultFactory.UserError(
               AppStudioError.TeamsPackageBuildError.name,
               AppStudioError.TeamsPackageBuildError.message(error)
             )
@@ -271,8 +284,88 @@ export class AppStudioPlugin implements Plugin {
   }
 
   public async postLocalDebug(ctx: PluginContext): Promise<Result<string, FxError>> {
+    TelemetryUtils.init(ctx);
+    TelemetryUtils.sendStartEvent(TelemetryEventName.localDebug);
     const localTeamsAppId = await this.appStudioPluginImpl.postLocalDebug(ctx);
-    return ok(localTeamsAppId);
+    if (localTeamsAppId.isOk()) {
+      TelemetryUtils.sendSuccessEvent(TelemetryEventName.localDebug);
+      return localTeamsAppId;
+    } else {
+      const error = localTeamsAppId.error;
+      if (error instanceof SystemError || error instanceof UserError) {
+        TelemetryUtils.sendErrorEvent(TelemetryEventName.localDebug, error);
+        return err(error);
+      } else {
+        const updateFailedError = AppStudioResultFactory.UserError(
+          AppStudioError.LocalAppIdUpdateFailedError.name,
+          AppStudioError.LocalAppIdUpdateFailedError.message(error)
+        );
+        TelemetryUtils.sendErrorEvent(TelemetryEventName.localDebug, updateFailedError);
+        return err(updateFailedError);
+      }
+    }
+  }
+
+  public async checkPermission(ctx: PluginContext): Promise<Result<ResourcePermission[], FxError>> {
+    TelemetryUtils.init(ctx);
+    TelemetryUtils.sendStartEvent(TelemetryEventName.checkPermission);
+
+    try {
+      const checkPermissionResult = await this.appStudioPluginImpl.checkPermission(ctx);
+      TelemetryUtils.sendSuccessEvent(TelemetryEventName.checkPermission);
+      return ok(checkPermissionResult);
+    } catch (error) {
+      TelemetryUtils.sendErrorEvent(TelemetryEventName.checkPermission, error);
+      return err(
+        error.name && error.name >= 400 && error.name < 500
+          ? AppStudioResultFactory.UserError(
+              AppStudioError.CheckPermissionFailedError.name,
+              AppStudioError.CheckPermissionFailedError.message(error)
+            )
+          : AppStudioResultFactory.SystemError(
+              AppStudioError.CheckPermissionFailedError.name,
+              AppStudioError.CheckPermissionFailedError.message(error)
+            )
+      );
+    }
+  }
+
+  public async grantPermission(ctx: PluginContext): Promise<Result<ResourcePermission[], FxError>> {
+    TelemetryUtils.init(ctx);
+    TelemetryUtils.sendStartEvent(TelemetryEventName.grantPermission);
+
+    try {
+      const grantPermissionResult = await this.appStudioPluginImpl.grantPermission(ctx);
+      TelemetryUtils.sendSuccessEvent(TelemetryEventName.grantPermission);
+      return ok(grantPermissionResult);
+    } catch (error) {
+      TelemetryUtils.sendErrorEvent(TelemetryEventName.grantPermission, error);
+      return err(
+        AppStudioResultFactory.SystemError(
+          AppStudioError.GrantPermissionFailedError.name,
+          error.message
+        )
+      );
+    }
+  }
+
+  public async listCollaborator(ctx: PluginContext): Promise<Result<TeamsAppAdmin[], FxError>> {
+    TelemetryUtils.init(ctx);
+    TelemetryUtils.sendStartEvent(TelemetryEventName.listCollaborator);
+
+    try {
+      const listCollaborator = await this.appStudioPluginImpl.listCollaborator(ctx);
+      TelemetryUtils.sendSuccessEvent(TelemetryEventName.listCollaborator);
+      return ok(listCollaborator);
+    } catch (error) {
+      TelemetryUtils.sendErrorEvent(TelemetryEventName.listCollaborator, error);
+      return err(
+        AppStudioResultFactory.SystemError(
+          AppStudioError.ListCollaboratorFailedError.name,
+          AppStudioError.ListCollaboratorFailedError.message(error)
+        )
+      );
+    }
   }
 
   async executeUserTask(func: Func, ctx: PluginContext): Promise<Result<any, FxError>> {
@@ -289,16 +382,19 @@ export class AppStudioPlugin implements Plugin {
         );
       }
       return err(
-        newSystemError(
-          Constants.PLUGIN_NAME,
+        new SystemError(
           "InvalidParam",
           `Invalid param:${JSON.stringify(func)}`,
+          Constants.PLUGIN_NAME,
+          undefined,
           Links.ISSUE_LINK
         )
       );
+    } else if (func.method === "migrateV1Project") {
+      return await this.migrateV1Project(ctx);
     }
     return err(
-      newSystemError(
+      new SystemError(
         Constants.PLUGIN_NAME,
         "FunctionRouterError",
         `Failed to route function call:${JSON.stringify(func)}`,

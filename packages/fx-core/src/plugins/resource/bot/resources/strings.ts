@@ -4,6 +4,9 @@ export class CommonStrings {
   public static readonly BOT_WORKING_DIR_NAME = "bot";
   public static readonly DEFAULT_FILE_ENCODING = "utf-8";
 
+  // for the use of migrating v1 project
+  public static readonly NODE_PACKAGE_FOLDER_NAME = "node_modules";
+
   public static readonly APP_SERVICE_PLAN = "App Service plan";
   public static readonly AZURE_WEB_APP = "Azure Web App";
   public static readonly BOT_CHANNEL_REGISTRATION = "Azure Bot Service channel registration";
@@ -35,6 +38,7 @@ export class PluginLocalDebug {
 
 export class PluginSolution {
   public static readonly PLUGIN_NAME = "solution";
+  public static readonly SUBSCRIPTION_ID = "subscriptionId";
   public static readonly RESOURCE_GROUP_NAME = "resourceGroupName";
   public static readonly LOCATION = "location";
   public static readonly M365_TENANT_ID = "teamsAppTenantId";
@@ -70,7 +74,6 @@ export class PluginBot {
   public static readonly LOCAL_BOT_PASSWORD = "localBotPassword";
   public static readonly LOCAL_OBJECT_ID = "localObjectId";
   public static readonly PROGRAMMING_LANGUAGE = "programmingLanguage";
-  public static readonly WAY_TO_REGISTER_BOT = "wayToRegisterBot";
   public static readonly SCAFFOLDED = "scaffolded";
   public static readonly APP_SERVICE_PLAN = "appServicePlan";
   public static readonly SITE_NAME = "siteName";
@@ -84,7 +87,6 @@ export class PluginBot {
   public static readonly BOT_CHANNEL_REGISTRATION = "botChannelReg";
   public static readonly UNPACK_FLAG = "unPackFlag";
   public static readonly MESSAGE_EXTENSION_SECTION = "composeExtensions";
-  public static readonly REDIRECT_URI = "redirectUri";
   public static readonly LOCAL_REDIRECT_URI = "local_redirectUri";
 }
 

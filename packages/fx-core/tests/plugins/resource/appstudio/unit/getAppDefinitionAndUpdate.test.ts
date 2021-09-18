@@ -36,43 +36,8 @@ import {
 import * as uuid from "uuid";
 import sinon from "sinon";
 import { AppStudioResultFactory } from "../../../../../src/plugins/resource/appstudio/results";
-
-class MockedAppStudioTokenProvider implements AppStudioTokenProvider {
-  async getAccessToken(showDialog?: boolean): Promise<string> {
-    return "someFakeToken";
-  }
-  async getJsonObject(showDialog?: boolean): Promise<Record<string, unknown>> {
-    return {
-      tid: "222",
-    };
-  }
-  signout(): Promise<boolean> {
-    throw new Error("Method not implemented.");
-  }
-  setStatusChangeCallback(
-    statusChange: (
-      status: string,
-      token?: string,
-      accountInfo?: Record<string, unknown>
-    ) => Promise<void>
-  ): Promise<boolean> {
-    throw new Error("Method not implemented.");
-  }
-  setStatusChangeMap(
-    name: string,
-    statusChange: (
-      status: string,
-      token?: string,
-      accountInfo?: Record<string, unknown>
-    ) => Promise<void>,
-    immediateCall?: boolean
-  ): Promise<boolean> {
-    throw new Error("Method not implemented.");
-  }
-  removeStatusChangeMap(name: string): Promise<boolean> {
-    throw new Error("Method not implemented.");
-  }
-}
+import { MockedAppStudioTokenProvider } from "../helper";
+import { newEnvInfo } from "../../../../../src";
 
 describe("Get AppDefinition and Update", () => {
   let plugin: AppStudioPlugin;
@@ -119,7 +84,7 @@ describe("Get AppDefinition and Update", () => {
   it("should return maybeAppDefinition error", async () => {
     ctx = {
       root: "./tests/plugins/resource/appstudio/resources/",
-      configOfOtherPlugins: new Map(),
+      envInfo: newEnvInfo(),
       config: new ConfigMap(),
       appStudioToken: new MockedAppStudioTokenProvider(),
     };
@@ -160,7 +125,7 @@ describe("Get AppDefinition and Update", () => {
   it("failed to get webApplicationInfoResource from local config and should return error", async () => {
     ctx = {
       root: "./tests/plugins/resource/appstudio/resources/",
-      configOfOtherPlugins: new Map(),
+      envInfo: newEnvInfo(),
       config: new ConfigMap(),
     };
     ctx.projectSettings = {
@@ -193,7 +158,7 @@ describe("Get AppDefinition and Update", () => {
     configOfOtherPlugins.set(PluginNames.AAD, AAD_ConfigMap);
     ctx = {
       root: "./tests/plugins/resource/appstudio/resources/",
-      configOfOtherPlugins: configOfOtherPlugins,
+      envInfo: newEnvInfo(undefined, undefined, configOfOtherPlugins),
       config: new ConfigMap(),
     };
     ctx.projectSettings = {
@@ -229,7 +194,7 @@ describe("Get AppDefinition and Update", () => {
     configOfOtherPlugins.set(PluginNames.BOT, BOT_ConfigMap);
     ctx = {
       root: "./tests/plugins/resource/appstudio/resources/",
-      configOfOtherPlugins: configOfOtherPlugins,
+      envInfo: newEnvInfo(undefined, undefined, configOfOtherPlugins),
       config: new ConfigMap(),
     };
     ctx.projectSettings = {
@@ -265,7 +230,7 @@ describe("Get AppDefinition and Update", () => {
     configOfOtherPlugins.set(PluginNames.BOT, BOT_ConfigMap);
     ctx = {
       root: "./tests/plugins/resource/appstudio/resources/",
-      configOfOtherPlugins: configOfOtherPlugins,
+      envInfo: newEnvInfo(undefined, undefined, configOfOtherPlugins),
       config: new ConfigMap(),
     };
     ctx.projectSettings = {
@@ -303,7 +268,7 @@ describe("Get AppDefinition and Update", () => {
     configOfOtherPlugins.set(PluginNames.BOT, BOT_ConfigMap);
     ctx = {
       root: "./tests/plugins/resource/appstudio/resources/",
-      configOfOtherPlugins: configOfOtherPlugins,
+      envInfo: newEnvInfo(undefined, undefined, configOfOtherPlugins),
       config: new ConfigMap(),
     };
     ctx.projectSettings = {
@@ -337,7 +302,7 @@ describe("Get AppDefinition and Update", () => {
     configOfOtherPlugins.set(PluginNames.BOT, BOT_ConfigMap);
     ctx = {
       root: "./tests/plugins/resource/appstudio/resources/",
-      configOfOtherPlugins: configOfOtherPlugins,
+      envInfo: newEnvInfo(undefined, undefined, configOfOtherPlugins),
       config: new ConfigMap(),
     };
     ctx.projectSettings = {
@@ -379,7 +344,7 @@ describe("Get AppDefinition and Update", () => {
     configOfOtherPlugins.set(PluginNames.BOT, BOT_ConfigMap);
     ctx = {
       root: "./tests/plugins/resource/appstudio/resources/",
-      configOfOtherPlugins: configOfOtherPlugins,
+      envInfo: newEnvInfo(undefined, undefined, configOfOtherPlugins),
       config: new ConfigMap(),
     };
     ctx.projectSettings = {
@@ -412,7 +377,7 @@ describe("Get AppDefinition and Update", () => {
     configOfOtherPlugins.set(PluginNames.BOT, BOT_ConfigMap);
     ctx = {
       root: "./tests/plugins/resource/appstudio/resources/",
-      configOfOtherPlugins: configOfOtherPlugins,
+      envInfo: newEnvInfo(undefined, undefined, configOfOtherPlugins),
       config: new ConfigMap(),
       appStudioToken: new MockedAppStudioTokenProvider(),
     };
@@ -428,11 +393,11 @@ describe("Get AppDefinition and Update", () => {
 
     const fakeAxiosInstance = axios.create();
     sandbox.stub(fakeAxiosInstance, "post").resolves({
-      status: 200,
+      status: 502,
       data: {
-        appId: "appId",
-        id: "id",
-        secretText: "secretText",
+        error: {
+          code: "BadGateway",
+        },
       },
     });
     sandbox.stub(axios, "create").returns(fakeAxiosInstance);
@@ -457,7 +422,7 @@ describe("Get AppDefinition and Update", () => {
     configOfOtherPlugins.set(PluginNames.BOT, BOT_ConfigMap);
     ctx = {
       root: "./tests/plugins/resource/appstudio/resources/",
-      configOfOtherPlugins: configOfOtherPlugins,
+      envInfo: newEnvInfo(undefined, undefined, configOfOtherPlugins),
       config: new ConfigMap(),
       appStudioToken: new MockedAppStudioTokenProvider(),
     };
@@ -520,7 +485,7 @@ describe("Get AppDefinition and Update", () => {
     configOfOtherPlugins.set(PluginNames.BOT, BOT_ConfigMap);
     ctx = {
       root: "./tests/plugins/resource/appstudio/resources/",
-      configOfOtherPlugins: configOfOtherPlugins,
+      envInfo: newEnvInfo(undefined, undefined, configOfOtherPlugins),
       config: new ConfigMap(),
       appStudioToken: new MockedAppStudioTokenProvider(),
     };
@@ -580,7 +545,7 @@ describe("Get AppDefinition and Update", () => {
     configOfOtherPlugins.set(PluginNames.BOT, BOT_ConfigMap);
     ctx = {
       root: "./tests/plugins/resource/appstudio/resources/",
-      configOfOtherPlugins: configOfOtherPlugins,
+      envInfo: newEnvInfo(undefined, undefined, configOfOtherPlugins),
       config: new ConfigMap(),
       appStudioToken: new MockedAppStudioTokenProvider(),
     };
@@ -614,7 +579,7 @@ describe("Get AppDefinition and Update", () => {
     configOfOtherPlugins.set(PluginNames.BOT, BOT_ConfigMap);
     ctx = {
       root: "./tests/plugins/resource/appstudio/resources/",
-      configOfOtherPlugins: configOfOtherPlugins,
+      envInfo: newEnvInfo(undefined, undefined, configOfOtherPlugins),
       config: new ConfigMap(),
       appStudioToken: new MockedAppStudioTokenProvider(),
     };
@@ -677,7 +642,7 @@ describe("Get AppDefinition and Update", () => {
     configOfOtherPlugins.set(PluginNames.BOT, BOT_ConfigMap);
     ctx = {
       root: "./tests/plugins/resource/appstudio/resources/",
-      configOfOtherPlugins: configOfOtherPlugins,
+      envInfo: newEnvInfo(undefined, undefined, configOfOtherPlugins),
       config: new ConfigMap(),
       appStudioToken: new MockedAppStudioTokenProvider(),
     };

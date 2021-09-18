@@ -2,11 +2,12 @@
 // Licensed under the MIT license.
 import {
   FolderQuestion,
-  Inputs,
   OptionItem,
   Platform,
   SingleSelectQuestion,
   TextInputQuestion,
+  FuncQuestion,
+  Inputs,
 } from "@microsoft/teamsfx-api";
 import * as jsonschema from "jsonschema";
 import * as path from "path";
@@ -15,13 +16,18 @@ import { environmentManager } from "./environment";
 
 export enum CoreQuestionNames {
   AppName = "app-name",
+  DefaultAppNameFunc = "default-app-name-func",
   Folder = "folder",
   Solution = "solution",
   CreateFromScratch = "scratch",
   Samples = "samples",
   Stage = "stage",
   SubStage = "substage",
+  SourceEnvName = "sourceEnvName",
   TargetEnvName = "targetEnvName",
+  TargetResourceGroupName = "targetResourceGroupName",
+  NewResourceGroupName = "newResourceGroupName",
+  NewResourceGroupLocation = "newResourceGroupLocation",
   NewTargetEnvName = "newTargetEnvName",
 }
 
@@ -52,6 +58,43 @@ export const QuestionAppName: TextInputQuestion = {
   placeholder: "Application name",
 };
 
+export const QuestionV1AppName: TextInputQuestion = {
+  type: "text",
+  name: CoreQuestionNames.AppName,
+  title: "Application name",
+  validation: {
+    validFunc: async (input: string, previousInputs?: Inputs): Promise<string | undefined> => {
+      const schema = {
+        pattern: ProjectNamePattern,
+      };
+      const appName = input as string;
+      const validateResult = jsonschema.validate(appName, schema);
+      if (validateResult.errors && validateResult.errors.length > 0) {
+        return "Application name must start with a letter and can only contain letters and digits.";
+      }
+      return undefined;
+    },
+  },
+  placeholder: "Application name",
+};
+
+export const DefaultAppNameFunc: FuncQuestion = {
+  type: "func",
+  name: CoreQuestionNames.DefaultAppNameFunc,
+  func: (inputs: Inputs) => {
+    const appName = path.basename(inputs.projectPath ?? "");
+    const schema = {
+      pattern: ProjectNamePattern,
+    };
+    const validateResult = jsonschema.validate(appName, schema);
+    if (validateResult.errors && validateResult.errors.length > 0) {
+      return undefined;
+    }
+
+    return appName;
+  },
+};
+
 export const QuestionRootFolder: FolderQuestion = {
   type: "folder",
   name: CoreQuestionNames.Folder,
@@ -67,22 +110,76 @@ export const QuestionSelectTargetEnvironment: SingleSelectQuestion = {
   forgetLastValue: true,
 };
 
-export const QuestionNewTargetEnvironmentName: TextInputQuestion = {
+export function getQuestionNewTargetEnvironmentName(projectPath: string): TextInputQuestion {
+  return {
+    type: "text",
+    name: CoreQuestionNames.NewTargetEnvName,
+    title: "New environment name",
+    validation: {
+      validFunc: async (input: string): Promise<string | undefined> => {
+        const targetEnvName = input as string;
+        const match = targetEnvName.match(environmentManager.envNameRegex);
+        if (!match) {
+          return "Environment name can only contain letters, digits, _ and -.";
+        }
+
+        const envConfigs = await environmentManager.listEnvConfigs(projectPath);
+
+        if (!envConfigs.isErr() && envConfigs.value!.indexOf(targetEnvName!) >= 0) {
+          return `Project environment ${targetEnvName} already exists.`;
+        }
+
+        return undefined;
+      },
+    },
+    placeholder: "New environment name",
+  };
+}
+
+export const QuestionSelectSourceEnvironment: SingleSelectQuestion = {
+  type: "singleSelect",
+  name: CoreQuestionNames.SourceEnvName,
+  title: "Select an environment to create copy",
+  staticOptions: [],
+  skipSingleOption: true,
+  forgetLastValue: true,
+};
+
+export const QuestionSelectResourceGroup: SingleSelectQuestion = {
+  type: "singleSelect",
+  name: CoreQuestionNames.TargetResourceGroupName,
+  title: "Select a resource group",
+  staticOptions: [],
+  skipSingleOption: true,
+  forgetLastValue: true,
+};
+
+export const QuestionNewResourceGroupName: TextInputQuestion = {
   type: "text",
-  name: CoreQuestionNames.NewTargetEnvName,
-  title: "New environment name",
+  name: CoreQuestionNames.NewResourceGroupName,
+  title: "New resource group name",
   validation: {
     validFunc: async (input: string): Promise<string | undefined> => {
-      const targetEnvName = input as string;
-      const match = targetEnvName.match(environmentManager.envNameRegex);
+      const name = input as string;
+      // https://docs.microsoft.com/en-us/rest/api/resources/resource-groups/create-or-update#uri-parameters
+      const match = name.match(/^[-\w._()]+$/);
       if (!match) {
-        return "Environment name can only contain letters, digits, _ and -.";
+        return "The name can only contain alphanumeric characters or the symbols ._-()";
       }
 
       return undefined;
     },
   },
-  placeholder: "New environment name",
+  placeholder: "New resource group name",
+  // default resource group name will change with env name
+  forgetLastValue: true,
+};
+
+export const QuestionNewResourceGroupLocation: SingleSelectQuestion = {
+  type: "singleSelect",
+  name: CoreQuestionNames.NewResourceGroupLocation,
+  title: "Location for the new resource group",
+  staticOptions: [],
 };
 
 export const QuestionSelectSolution: SingleSelectQuestion = {

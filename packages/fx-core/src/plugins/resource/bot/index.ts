@@ -11,6 +11,8 @@ import {
   UserError,
   SystemError,
   AzureSolutionSettings,
+  Func,
+  ok,
 } from "@microsoft/teamsfx-api";
 
 import { FxResult, FxBotPluginResultFactory as ResultFactory } from "./result";
@@ -23,6 +25,7 @@ import { telemetryHelper } from "./utils/telemetry-helper";
 import { BotOptionItem, MessageExtensionItem } from "../../solution/fx-solution/question";
 import { Service } from "typedi";
 import { ResourcePlugins } from "../../solution/fx-solution/ResourcePluginContainer";
+import "./v2";
 @Service(ResourcePlugins.BotPlugin)
 export class TeamsBot implements Plugin {
   name = "fx-resource-bot";
@@ -32,24 +35,6 @@ export class TeamsBot implements Plugin {
     return cap.includes(BotOptionItem.id) || cap.includes(MessageExtensionItem.id);
   }
   public teamsBotImpl: TeamsBotImpl = new TeamsBotImpl();
-
-  public async getQuestions(
-    stage: Stage,
-    ctx: PluginContext
-  ): Promise<Result<QTreeNode | undefined, FxError>> {
-    return this.teamsBotImpl.getQuestions(stage, ctx);
-  }
-
-  public async preScaffold(context: PluginContext): Promise<FxResult> {
-    Logger.setLogger(context.logProvider);
-
-    return await this.runWithExceptionCatching(
-      context,
-      () => this.teamsBotImpl.preScaffold(context),
-      true,
-      LifecycleFuncNames.PRE_SCAFFOLD
-    );
-  }
 
   public async scaffold(context: PluginContext): Promise<FxResult> {
     Logger.setLogger(context.logProvider);
@@ -101,6 +86,19 @@ export class TeamsBot implements Plugin {
       true,
       LifecycleFuncNames.POST_PROVISION
     );
+  }
+
+  public async generateArmTemplates(context: PluginContext): Promise<FxResult> {
+    Logger.setLogger(context.logProvider);
+
+    const result = await this.runWithExceptionCatching(
+      context,
+      () => this.teamsBotImpl.generateArmTemplates(context),
+      true,
+      LifecycleFuncNames.GENERATE_ARM_TEMPLATES
+    );
+
+    return result;
   }
 
   public async preDeploy(context: PluginContext): Promise<FxResult> {
@@ -158,19 +156,34 @@ export class TeamsBot implements Plugin {
     );
   }
 
+  public async executeUserTask(func: Func, context: PluginContext): Promise<FxResult> {
+    Logger.setLogger(context.logProvider);
+
+    if (func.method === "migrateV1Project") {
+      return await this.runWithExceptionCatching(
+        context,
+        () => this.teamsBotImpl.migrateV1Project(context),
+        true,
+        LifecycleFuncNames.MIGRATE_V1_PROJECT
+      );
+    }
+    return ok(undefined);
+  }
+
   private wrapError(
     e: any,
     context: PluginContext,
     sendTelemetry: boolean,
     name: string
   ): FxResult {
+    let errorMsg = e.message;
     if (e.innerError) {
-      e.message += ` Detailed error: ${e.innerError.message}.`;
+      errorMsg += ` Detailed error: ${e.innerError.message}.`;
       if (e.innerError.response?.data?.errorMessage) {
-        e.message += ` Reason: ${e.innerError.response?.data?.errorMessage}`;
+        errorMsg += ` Reason: ${e.innerError.response?.data?.errorMessage}`;
       }
     }
-    Logger.error(e.message);
+    Logger.error(errorMsg);
     if (e instanceof UserError || e instanceof SystemError) {
       const res = err(e);
       sendTelemetry && telemetryHelper.sendResultEvent(context, name, res);
@@ -191,9 +204,13 @@ export class TeamsBot implements Plugin {
         telemetryHelper.sendResultEvent(
           context,
           name,
-          ResultFactory.SystemError(UnhandledErrorCode, `Got an unhandled error: ${e.message}`)
+          ResultFactory.SystemError(
+            UnhandledErrorCode,
+            `Got an unhandled error: ${e.message}`,
+            e.innerError
+          )
         );
-      return ResultFactory.SystemError(UnhandledErrorCode, e.message, e);
+      return ResultFactory.SystemError(UnhandledErrorCode, e.message, e.innerError);
     }
   }
 

@@ -45,6 +45,21 @@ export const ARM_TEMPLATE_OUTPUT = "armTemplateOutput";
 export const RESOURCE_GROUP_NAME = "resourceGroupName";
 
 /**
+ * Config key whose value is the resource group location of project.
+ */
+export const LOCATION = "location";
+
+/**
+ * Config key whose value is the subscription ID of project.
+ */
+export const SUBSCRIPTION_ID = "subscriptionId";
+
+/**
+ * Config key whose value is the subscription name of project.
+ */
+export const SUBSCRIPTION_NAME = "subscriptionName";
+
+/**
  * Config key whose value is the user info of collaborator
  */
 export const USER_INFO = "userInfo";
@@ -81,7 +96,13 @@ export enum SolutionError {
   NoResourcePluginSelected = "NoResourcePluginSelected",
   NoAppStudioToken = "NoAppStudioToken",
   NoTeamsAppTenantId = "NoTeamsAppTenantId",
+  FailedToCheckResourceGroupExistence = "FailedToCheckResourceGroupExistence",
   FailedToCreateResourceGroup = "FailedToCreateResourceGroup",
+  FailedToListResourceGroup = "FailedToListResourceGrouop",
+  FailedToListResourceGroupLocation = "FailedToListResourceGroupLocation",
+  FailedToGetResourceGroupInfoInputs = "FailedToGetResourceGroupInfoInputs",
+  ResourceGroupNotFound = "ResourceGroupNotFound",
+  SubscriptionNotFound = "SubscriptionNotFound",
   NotLoginToAzure = "NotLoginToAzure",
   AzureAccountExtensionNotInitialized = "AzureAccountExtensionNotInitialized",
   LocalTabEndpointMissing = "LocalTabEndpointMissing",
@@ -118,10 +139,17 @@ export enum SolutionError {
   FailedToCompileBicepFiles = "FailedToCompileBicepFiles",
   FailedToGetAzureCredential = "FailedToGetAzureCredential",
   FailedToDeployArmTemplatesToAzure = "FailedToDeployArmTemplatesToAzure",
-  CannotCheckPermissionBeforeProvision = "CannotCheckPermissionBeforeProvision",
+  V1ProjectNotSupported = "V1ProjectNotSupported",
   FailedToRetrieveUserInfo = "FailedToRetrieveUserInfo",
   M365AccountNotMatch = "M365AccountNotMatch",
   FeatureNotSupported = "FeatureNotSupported",
+  CannotProcessBeforeProvision = "CannotProcessBeforeProvision",
+  CannotFindUserInCurrentTenant = "CannotFindUserInCurrentTenant",
+  FailedToGrantPermission = "FailedToGrantPermission",
+  FailedToCheckPermission = "FailedToCheckPermission",
+  FailedToListCollaborator = "FailedToListCollaborator",
+  EmailCannotBeEmptyOrSame = "EmailCannotBeEmptyOrSame",
+  FailedToExecuteTasks = "FailedToExecuteTasks",
 }
 
 export const LOCAL_DEBUG_TAB_ENDPOINT = "localTabEndpoint";
@@ -157,11 +185,29 @@ export enum SolutionTelemetryEvent {
   CreateStart = "create-start",
   Create = "create",
 
+  MigrateStart = "migrate-start",
+  Migrate = "migrate",
+
   AddResourceStart = "add-resource-start",
   AddResource = "add-resource",
 
   AddCapabilityStart = "add-capability-start",
   AddCapability = "add-capability",
+
+  GrantPermissionStart = "grant-permission-start",
+  GrantPermission = "grant-permission",
+
+  CheckPermissionStart = "check-permission-start",
+  CheckPermission = "check-permission",
+
+  ListCollaboratorStart = "list-collaborator-start",
+  ListCollaborator = "list-collaborator",
+
+  GenerateArmTemplateStart = "generate-armtemplate-start",
+  GenerateArmTemplate = "generate-armtemplate",
+
+  ArmDeploymentStart = "deploy-armtemplate-start",
+  ArmDeployment = "deploy-armtemplate",
 }
 
 export enum SolutionTelemetryProperty {
@@ -169,6 +215,11 @@ export enum SolutionTelemetryProperty {
   Resources = "resources",
   Capabilities = "capabilities",
   Success = "success",
+  CollaboratorCount = "collaborator-count",
+  AadOwnerCount = "aad-owner-count",
+  AadPermission = "aad-permission",
+  TeamsAppPermission = "teams-app-permission",
+  ProgrammingLanguage = "programming-language",
 }
 
 export enum SolutionTelemetrySuccess {

@@ -110,8 +110,6 @@ export interface EnvMeta {
   sideloading: boolean;
 }
 
-export type EnvConfig = Json;
-
 /**
  * project static settings
  */
@@ -121,7 +119,8 @@ export interface ProjectSettings {
   projectId: string;
   programmingLanguage?: string;
   defaultFunctionName?: string;
-  solutionSettings?: SolutionSettings;
+  solutionSettings: SolutionSettings;
+  activeEnvironment?: string;
 }
 
 /**
@@ -137,6 +136,7 @@ export interface AzureSolutionSettings extends SolutionSettings {
   capabilities: string[];
   azureResources: string[];
   activeResourcePlugins: string[];
+  migrateFromV1?: boolean;
 }
 
 /**
@@ -162,16 +162,18 @@ export interface ProjectStates {
 export interface Inputs extends Json {
   projectPath?: string;
   targetEnvName?: string;
+  sourceEnvName?: string;
   platform: Platform;
   stage?: Stage;
   vscodeEnv?: VsCodeEnv;
   ignoreLock?: boolean;
   ignoreTypeCheck?: boolean;
   ignoreConfigPersist?: boolean;
+  ignoreEnvInfo?: boolean;
 }
 
 export interface ProjectConfig {
   settings?: ProjectSettings;
-  config?: SolutionConfig;
-  localSettings?: LocalSettings;
+  config?: SolutionConfig | Json;
+  localSettings?: LocalSettings | Json;
 }

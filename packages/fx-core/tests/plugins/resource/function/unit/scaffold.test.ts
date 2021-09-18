@@ -8,40 +8,16 @@ import * as sinon from "sinon";
 import AdmZip from "adm-zip";
 import mock from "mock-fs";
 
-import * as fetch from "../../../../../src/plugins/resource/function/utils/templates-fetch";
-import {
-  DependentPluginInfo,
-  FunctionPluginInfo,
-} from "../../../../../src/plugins/resource/function/constants";
+import * as fetch from "../../../../../src/common/templatesUtils";
+import { FunctionPluginInfo } from "../../../../../src/plugins/resource/function/constants";
 import { FunctionPlugin } from "../../../../../src/plugins/resource/function/index";
 import { FxResult } from "../../../../../src/plugins/resource/function/result";
 import { QuestionKey } from "../../../../../src/plugins/resource/function/enums";
 import { getTemplatesFolder } from "../../../../../src";
 import { Platform } from "@microsoft/teamsfx-api";
+import { MockContext } from "../helper";
 
-const context: any = {
-  configOfOtherPlugins: new Map<string, Map<string, string>>([
-    [
-      DependentPluginInfo.solutionPluginName,
-      new Map<string, string>([
-        [DependentPluginInfo.resourceGroupName, "ut"],
-        [DependentPluginInfo.subscriptionId, "ut"],
-        [DependentPluginInfo.resourceNameSuffix, "ut"],
-      ]),
-    ],
-  ]),
-  app: {
-    name: {
-      short: "ut",
-    },
-  },
-  projectSettings: {
-    appName: "ut",
-    programmingLanguage: "javascript",
-  },
-  config: new Map(),
-  root: path.join(__dirname, "ut"),
-};
+const context = MockContext();
 
 describe(FunctionPluginInfo.pluginName, () => {
   describe("Function Scaffold Test", () => {
@@ -96,8 +72,8 @@ describe(FunctionPluginInfo.pluginName, () => {
       context.answers[QuestionKey.functionName] = "httpTrigger";
       const zip = new AdmZip();
       zip.addFile("test.js.tpl", Buffer.from("{{appName}} {{functionName}}"));
-      sinon.stub(fetch, "getTemplateURL").resolves(undefined);
-      sinon.stub(fetch, "fetchZipFromURL").resolves(zip);
+      sinon.stub(fetch, "fetchTemplateUrl").resolves("fackurl");
+      sinon.stub(fetch, "fetchZipFromUrl").resolves(zip);
 
       const plugin: FunctionPlugin = new FunctionPlugin();
 
@@ -115,8 +91,8 @@ describe(FunctionPluginInfo.pluginName, () => {
       context.answers[QuestionKey.functionName] = "httpTrigger";
       const zip = new AdmZip();
       zip.addFile("test.js.tpl", Buffer.from("{{appName}} {{functionName}}"));
-      sinon.stub(fetch, "getTemplateURL").resolves(undefined);
-      sinon.stub(fetch, "fetchZipFromURL").resolves(zip);
+      sinon.stub(fetch, "fetchTemplateUrl").resolves(undefined);
+      sinon.stub(fetch, "fetchZipFromUrl").resolves(zip);
 
       const plugin: FunctionPlugin = new FunctionPlugin();
 
@@ -132,7 +108,7 @@ describe(FunctionPluginInfo.pluginName, () => {
       // Arrange
       context.answers = context.answers = { platform: Platform.VSCode };
       context.answers[QuestionKey.functionName] = "httpTrigger";
-      sinon.stub(fetch, "getTemplateURL").rejects(new Error());
+      sinon.stub(fetch, "fetchTemplateUrl").rejects(new Error());
       const plugin: FunctionPlugin = new FunctionPlugin();
 
       // Act

@@ -83,12 +83,40 @@ export enum TelemetryEvent {
   DebugNpmInstall = "debug-npm-install",
 
   Survey = "survey",
+  SurveyData = "survey-data",
 
   EditSecretStart = "edit-secret-start",
   EditSecret = "edit-secret",
 
   OpenTeamsApp = "open-teams-app",
   UpdateTeamsApp = "update-teams-app",
+
+  CreateNewEnvironmentStart = "create-new-environment-start",
+  CreateNewEnvironment = "create-new-environment",
+
+  MigrateV1ProjectStart = "migrate-v1-project-start",
+  MigrateV1Project = "migrate-v1-project",
+  MigrateV1ProjectNotificationStart = "migrate-v1-project-notification-start",
+  MigrateV1ProjectNotification = "migrate-v1-project-notification",
+  OpenV1Project = "open-v1-project",
+
+  ViewEnvironment = "view-environment",
+  ActivateEnvironment = "activate-environment",
+
+  CheckSideloading = "check-sideloading",
+
+  ListCollaboratorStart = "list-collaborator-start",
+  ListCollaborator = "list-collaborator",
+
+  GrantPermissionStart = "grant-permission-start",
+  GrantPermission = "grant-permission",
+
+  CheckPermissionStart = "check-permission-start",
+  CheckPermission = "check-permission",
+  OpenSideloadingReadmore = "open-sideloading-readmore",
+
+  ShowWhatIsNewNotification = "show-what-is-new-notification",
+  ShowWhatIsNewContext = "show-what-is-new-context",
 }
 
 export enum TelemetryProperty {
@@ -122,6 +150,10 @@ export enum TelemetryProperty {
   SampleAppName = "sample-app-name",
   CurrentAction = "current-action",
   VideoPlayFrom = "video-play-from",
+  FeatureFlags = "feature-flags",
+  UpdateTeamsAppReason = "update-teams-app-reason",
+  IsSideloadingAllowed = "is-sideloading-allowed",
+  IsExistingUser = "is-existing-user",
 }
 
 export enum TelemetrySuccess {
@@ -134,6 +166,7 @@ export enum TelemetryTiggerFrom {
   TreeView = "TreeView",
   Webview = "Webview",
   Other = "Other",
+  Unknow = "Unknow",
 }
 
 export enum WatchVideoFrom {
@@ -150,6 +183,25 @@ export enum TelemetryErrorType {
 export enum AccountType {
   M365 = "m365",
   Azure = "azure",
+}
+
+export enum TelemetryUpdateAppReason {
+  Manual = "manual",
+  AfterDelay = "afterDelay",
+  FocusOut = "focusOut",
+}
+
+export enum TelemetrySurveyDataProperty {
+  Q1Title = "q1-title",
+  Q1Result = "q1-result",
+  Q2Title = "q2-title",
+  Q2Result = "q2-result",
+  Q3Title = "q3-title",
+  Q3Result = "q3-result",
+  Q4Title = "q4-title",
+  Q4Result = "q4-result",
+  Q5Title = "q5-title",
+  Q5Result = "q5-result",
 }
 
 export const TelemetryComponentType = "extension";

@@ -13,6 +13,8 @@ import { CommonStrings, ConfigNames } from "../resources/strings";
 import { LifecycleFuncNames } from "../constants";
 import { RetryHandler } from "../utils/retryHandler";
 import { getAppStudioEndpoint } from "../../../..";
+import { Messages } from "../resources/messages";
+import { Logger } from "../logger";
 
 export class AppStudio {
   private static baseUrl = getAppStudioEndpoint();
@@ -26,9 +28,11 @@ export class AppStudio {
       headers: {
         post: {
           Authorization: `Bearer ${accessToken}`,
+          "Client-Source": "teamstoolkit",
         },
         get: {
           Authorization: `Bearer ${accessToken}`,
+          "Client-Source": "teamstoolkit",
         },
       },
     });
@@ -152,6 +156,16 @@ export class AppStudio {
 
     let response = undefined;
     try {
+      if (registration.botId) {
+        const getBotRegistrationResponse = await RetryHandler.Retry(() =>
+          axiosInstance.get(`${AppStudio.baseUrl}/api/botframework/${registration.botId}`)
+        );
+        if (getBotRegistrationResponse && getBotRegistrationResponse.data) {
+          Logger.info(Messages.BotResourceExist("Appstudio"));
+          return;
+        }
+      }
+
       response = await RetryHandler.Retry(() =>
         axiosInstance.post(`${AppStudio.baseUrl}/api/botframework`, registration)
       );

@@ -17,6 +17,7 @@ import {
   isAutoSkipSelect,
   SingleSelectQuestion,
   MultiSelectQuestion,
+  OptionItem,
 } from "@microsoft/teamsfx-api";
 
 import { FxCore, isMultiEnvEnabled } from "@microsoft/teamsfx-core";
@@ -28,6 +29,7 @@ import CLIUIInstance from "./userInteraction";
 import { flattenNodes, getSingleOptionString, toYargsOptions } from "./utils";
 import { Options } from "yargs";
 import {
+  CollaboratorEmailNode,
   EnvNode,
   EnvNodeNoCreate,
   RootFolderNode,
@@ -39,7 +41,17 @@ export class HelpParamGenerator {
   private core: FxCore;
   private questionsMap: Map<string, QTreeNode> = new Map<string, QTreeNode>();
   private initialized = false;
-  private static showEnvStage: string[] = [Stage.build, Stage.publish, Stage.deploy];
+
+  private static showEnvStage: string[] = [
+    Stage.build,
+    Stage.publish,
+    Stage.deploy,
+    Stage.grantPermission,
+    Stage.checkPermission,
+    "validate",
+    Stage.activateEnv,
+    Stage.createEnv,
+  ];
 
   private static instance: HelpParamGenerator;
 
@@ -137,12 +149,12 @@ export class HelpParamGenerator {
       throw NoInitializedHelpGenerator();
     }
     let resourceName: string | undefined;
-    let capabilityName: string | undefined;
+    let capabilityId: string | undefined;
     if (stage.startsWith("addResource")) {
       resourceName = stage.split("-")[1];
       stage = "addResource";
     } else if (stage.startsWith("addCapability")) {
-      capabilityName = stage.split("-")[1];
+      capabilityId = stage.split("-")[1];
       stage = "addCapability";
     }
     const root = this.getQuestionRootNodeForHelp(stage);
@@ -162,13 +174,19 @@ export class HelpParamGenerator {
       nodes = [rootCopy]
         .concat(mustHaveNodes)
         .concat(resourcesNodes ? flattenNodes(resourcesNodes) : []);
-    } else if (capabilityName && root?.children) {
+    } else if (capabilityId && root?.children) {
       const rootCopy: QTreeNode = JSON.parse(JSON.stringify(root));
       // Do CLI map for capability add
       const capabilityNodes = rootCopy.children!.filter((node) =>
-        ((node.condition as any).containsAny as string[]).includes(capabilityName as string)
+        ((node.condition as any).containsAny as string[]).includes(capabilityId as string)
       )[0];
-      (rootCopy.data as any).default = [capabilityName];
+      const items = (rootCopy.data as MultiSelectQuestion).staticOptions as OptionItem[];
+      const index = items.findIndex(
+        (item) => item.id === capabilityId || item.cliName === capabilityId
+      );
+      if (index > -1) {
+        (rootCopy.data as any).default = [items[index].cliName || items[index].id];
+      }
       (rootCopy.data as any).hide = true;
       rootCopy.children = undefined;
       nodes = [rootCopy].concat(capabilityNodes ? flattenNodes(capabilityNodes) : []);
@@ -214,6 +232,11 @@ export class HelpParamGenerator {
           (node.data as any).hide = true;
         }
       }
+    }
+
+    // Add user email node for grant permission
+    if (stage === Stage.grantPermission) {
+      nodes = nodes.concat([CollaboratorEmailNode]);
     }
 
     const nodesWithoutGroup = nodes.filter((node) => node.data.type !== "group");

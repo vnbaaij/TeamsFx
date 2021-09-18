@@ -2,123 +2,134 @@
 // Licensed under the MIT license.
 "use strict";
 
-import { Func, FxError, Inputs, Stage, SystemError, UserError } from "@microsoft/teamsfx-api";
+import {
+  assembleError,
+  Func,
+  FxError,
+  Inputs,
+  Stage,
+  SystemError,
+  UserError,
+  Json,
+} from "@microsoft/teamsfx-api";
 
 export const CoreSource = "Core";
 
-export function ProjectFolderExistError(path: string) {
+export function ProjectFolderExistError(path: string): UserError {
   return new UserError(
     "ProjectFolderExistError",
-    `Path ${path} alreay exists. Select a different folder.`,
-    CoreSource,
-    new Error().stack
+    `Path ${path} already exists. Select a different folder.`,
+    CoreSource
+  );
+}
+
+export function ProjectFolderNotExistError(path: string): UserError {
+  return new UserError(
+    "ProjectFolderNotExistError",
+    `Path ${path} does not exist. Select a different folder.`,
+    CoreSource
+  );
+}
+
+export function EmptyProjectFolderError(): SystemError {
+  return new SystemError("EmptyProjectFolderError", "Project path is empty", CoreSource);
+}
+
+export function MigrateNotImplementError(path: string): SystemError {
+  return new SystemError(
+    "MigrateNotImplemented",
+    `Migrate V1 Project is not implemented.`,
+    CoreSource
   );
 }
 
 export function WriteFileError(e: Error): SystemError {
-  return new SystemError(
-    "WriteFileError",
-    `write file error ${e["message"]}`,
-    CoreSource,
-    e.stack,
-    undefined,
-    e
-  );
+  return new SystemError(e, CoreSource, "WriteFileError");
 }
 
 export function ReadFileError(e: Error): SystemError {
-  return new SystemError(
-    "ReadFileError",
-    `read file error ${e["message"]}`,
-    CoreSource,
-    e.stack,
-    undefined,
-    e
-  );
+  return new SystemError(e, CoreSource, "ReadFileError");
 }
 
-export function NoneFxError(e: Error): SystemError {
-  return new SystemError(
-    "NoneFxError",
-    `NoneFxError ${e["message"]}`,
-    CoreSource,
-    e.stack,
-    undefined,
-    e
-  );
+export function CopyFileError(e: Error): SystemError {
+  return new SystemError(e, CoreSource, "CopyFileError");
 }
 
-export function NoProjectOpenedError() {
+export function NoneFxError(e: any): FxError {
+  const err = assembleError(e);
+  err.name = "NoneFxError";
+  return err;
+}
+
+export function NoProjectOpenedError(): UserError {
   return new UserError(
     "NoProjectOpened",
     "No project opened, you can create a new project or open an existing one.",
-    CoreSource,
-    new Error().stack
+    CoreSource
   );
 }
 
-export function PathNotExistError(path: string) {
+export function InvalidV1ProjectError(message?: string) {
   return new UserError(
-    "PathNotExist",
-    `The path not exist: ${path}`,
-    CoreSource,
-    new Error().stack
+    "InvalidV1Project",
+    `The project is not a valid Teams Toolkit V1 project. ${message}`,
+    CoreSource
   );
 }
 
-export function InvalidProjectError(msg?: string) {
+export function PathNotExistError(path: string): UserError {
+  return new UserError("PathNotExist", `The path not exist: ${path}`, CoreSource);
+}
+
+export function InvalidProjectError(msg?: string): UserError {
   return new UserError(
     "InvalidProject",
     `The command only works for project created by Teamsfx Toolkit. ${msg ? ": " + msg : ""}`,
-    CoreSource,
-    new Error().stack
+    CoreSource
   );
 }
 
-export function ConcurrentError() {
+export class ConcurrentError extends UserError {
+  constructor() {
+    super(
+      new.target.name,
+      "Concurrent operation error, please wait until the running task finish or you can reload the window to cancel it.",
+      CoreSource
+    );
+  }
+}
+
+export function InvalidProjectSettingsFileError(msg?: string): UserError {
   return new UserError(
-    "ConcurrentOperation",
-    "Concurrent operation error, please wait until the running task finish or you can reload the window to cancel it.",
-    CoreSource,
-    new Error().stack
+    "InvalidProjectSettingsFile",
+    `The projectSettings.json file is corrupted.`,
+    CoreSource
   );
 }
 
-export function TaskNotSupportError(task: Stage | string) {
-  return new SystemError(
-    "TaskNotSupport",
-    `Task is not supported yet: ${task}`,
-    CoreSource,
-    new Error().stack
-  );
+export function TaskNotSupportError(task: Stage | string): SystemError {
+  return new SystemError("TaskNotSupport", `Task is not supported yet: ${task}`, CoreSource);
 }
 
-export function FetchSampleError() {
-  return new UserError(
-    "FetchSampleError",
-    "Failed to download sample app",
-    CoreSource,
-    new Error().stack
-  );
+export function FetchSampleError(): UserError {
+  return new UserError("FetchSampleError", "Failed to download sample app", CoreSource);
 }
 
-export function InvalidInputError(reason: string, inputs?: Inputs) {
+export function InvalidInputError(reason: string, inputs?: Inputs): UserError {
   return new UserError(
     "InvalidInput",
     inputs
       ? `Invalid inputs: ${reason}, inputs: ${JSON.stringify(inputs)}`
       : `Invalid inputs: ${reason}`,
-    CoreSource,
-    new Error().stack
+    CoreSource
   );
 }
 
-export function FunctionRouterError(func: Func) {
+export function FunctionRouterError(func: Func): UserError {
   return new UserError(
     "FunctionRouterError",
     `Failed to route function call:${JSON.stringify(func)}`,
-    CoreSource,
-    new Error().stack
+    CoreSource
   );
 }
 
@@ -128,41 +139,110 @@ export function ContextUpgradeError(error: any, isUserError = false): FxError {
       "ContextUpgradeError",
       `Failed to update context: ${error.message}`,
       CoreSource,
-      error.stack ?? new Error().stack
+      undefined,
+      error
     );
   } else {
     return new SystemError(
       "ContextUpgradeError",
       `Failed to update context: ${error.message}`,
       CoreSource,
-      error.stack ?? new Error().stack
+      undefined,
+      error
     );
   }
 }
 
-export function PluginHasNoTaskImpl(pluginName: string, task: string) {
+export function InvalidProfileError(pluginName: string, profile: Json): SystemError {
+  return new SystemError(
+    CoreSource,
+    "InvalidProfileError",
+    `Plugin ${pluginName}'s profile(${JSON.stringify(profile)}) is invalid`
+  );
+}
+
+export function PluginHasNoTaskImpl(pluginName: string, task: string): SystemError {
   return new SystemError(
     "PluginHasNoTaskImplError",
     `Plugin ${pluginName} has not implemented method: ${task}`,
-    CoreSource,
-    new Error().stack
+    CoreSource
   );
 }
 
-export function ProjectSettingsUndefinedError(): FxError {
+export function ProjectSettingsUndefinedError(): SystemError {
   return new SystemError(
     "ProjectSettingsUndefinedError",
     "Project settings is undefined",
-    CoreSource,
-    new Error().stack
+    CoreSource
   );
 }
 
-export function ProjectEnvNotExistError(env: string) {
+export function ProjectEnvNotExistError(env: string): UserError {
   return new UserError(
     "ProjectEnvNotExistError",
     `The specified env ${env} does not exist. Select an existing env.`,
-    CoreSource,
-    new Error().stack
+    CoreSource
   );
+}
+
+export function InvalidEnvNameError(): UserError {
+  return new UserError(
+    "InvalidEnvNameError",
+    `Environment name can only contain letters, digits, _ and -.`,
+    CoreSource
+  );
+}
+
+export function ProjectEnvAlreadyExistError(env: string): FxError {
+  return new UserError(
+    "ProjectEnvAlreadyExistError",
+    `Project environment ${env} already exists.`,
+    CoreSource
+  );
+}
+
+export function InvalidEnvConfigError(env: string, errorMsg: string): UserError {
+  return new UserError(
+    "InvalidEnvConfigError",
+    `The configuration config.${env}.json is invalid, details: ${errorMsg}.`,
+    CoreSource
+  );
+}
+
+export function NonExistEnvNameError(env: string): UserError {
+  return new UserError("NonExistEnvNameError", `Can not find environment ${env}.`, CoreSource);
+}
+
+export function NonActiveEnvError(): UserError {
+  return new UserError("NonActiveEnvError", `Can not find active environment.`, CoreSource);
+}
+
+export function ModifiedSecretError(): UserError {
+  return new UserError("ModifiedSecretError", "The secret file has been changed.", CoreSource);
+}
+
+export class LoadSolutionError extends SystemError {
+  constructor() {
+    super(new.target.name, "Failed to load solution", CoreSource);
+  }
+}
+
+export class NotImplementedError extends SystemError {
+  constructor(method: string) {
+    super(new.target.name, `Method not implemented:${method}`, CoreSource);
+  }
+}
+
+export class ObjectIsUndefinedError extends SystemError {
+  constructor(name: string) {
+    super(new.target.name, `Object ${name} is undefined, which is not expected`, CoreSource);
+  }
+}
+
+export function SolutionConfigError(): UserError {
+  return new UserError("SolutionConfigError", "Load solution context failed.", CoreSource);
+}
+
+export function ProjectSettingError(): UserError {
+  return new UserError("ProjectSettingError", "Load project settings failed.", CoreSource);
 }

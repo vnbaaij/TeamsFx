@@ -54,10 +54,6 @@ export class FrontendPathInfo {
   static TemplateFileExt = ".tpl";
   static TemplatePackageExt = ".zip";
 
-  static BicepTemplateFolderName = "bicep";
-  static ModuleOrchestrationFileName = "module.template.bicep";
-  static InputParameterOrchestrationFileName = "input_param.template.bicep";
-  static OutputOrchestrationFileName = "output.template.bicep";
   static ModuleFileName = "frontendHosting.bicep";
 
   static BuildFolderName = "build";
@@ -97,14 +93,14 @@ export class DependentPluginInfo {
 }
 
 export class ArmOutput {
-  static readonly SimpleAuthEndpoint = "simpleAuth_endpoint";
   static readonly FrontendEndpoint = "frontendHosting_endpoint";
   static readonly FrontendDomain = "frontendHosting_domain";
-  static readonly FrontendStorageName = "frontendHosting_storageName";
+  static readonly FrontendStorageResourceId = "frontendHosting_storageResourceId";
 }
 
 export class FrontendConfigInfo {
-  static readonly StorageName = "storageName";
+  static readonly StorageName = "storageName"; // TODO: Remove this storageName config when arm-disabled scenario removed
+  static readonly StorageResourceId = "storageResourceId";
   static readonly Endpoint = "endpoint";
   static readonly Domain = "domain";
 }
@@ -128,8 +124,10 @@ export class TelemetryEvent {
   static readonly PreDeploy = "pre-deploy";
   static readonly Deploy = "deploy";
   static readonly SkipDeploy = "skip-deploy";
+  static readonly DeploymentInfoNotFound = "deployment-info-not-found";
 
   static readonly GenerateArmTemplates = "generate-arm-templates";
+  static readonly ExecuteUserTask = "execute-user-task";
 }
 
 export class TelemetryKey {

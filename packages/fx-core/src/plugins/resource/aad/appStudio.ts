@@ -110,6 +110,7 @@ export namespace AppStudio {
       baseURL: baseUrl,
     });
     instance.defaults.headers.common["Authorization"] = `Bearer ${appStudioToken}`;
+    instance.defaults.headers.common["Client-Source"] = "teamstoolkit";
     instance.interceptors.request.use(function (config) {
       config.params = { teamstoolkit: true, ...config.params };
       return config;

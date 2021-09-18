@@ -45,19 +45,19 @@ export class ConfigUtils {
       case ConfigKeysOfOtherPlugin.localDebugTabDomain:
         return isMultiEnvEnable
           ? ctx.localSettings?.frontend?.get(LocalSettingsFrontendKeys.TabDomain)
-          : ctx.configOfOtherPlugins.get(Plugins.localDebug)?.get(key);
+          : ctx.envInfo.profile.get(Plugins.localDebug)?.get(key);
       case ConfigKeysOfOtherPlugin.localDebugTabEndpoint:
         return isMultiEnvEnable
           ? ctx.localSettings?.frontend?.get(LocalSettingsFrontendKeys.TabEndpoint)
-          : ctx.configOfOtherPlugins.get(Plugins.localDebug)?.get(key);
+          : ctx.envInfo.profile.get(Plugins.localDebug)?.get(key);
       case ConfigKeysOfOtherPlugin.localDebugBotEndpoint:
         return isMultiEnvEnable
           ? ctx.localSettings?.bot?.get(LocalSettingsBotKeys.BotEndpoint)
-          : ctx.configOfOtherPlugins.get(Plugins.localDebug)?.get(key);
+          : ctx.envInfo.profile.get(Plugins.localDebug)?.get(key);
       case ConfigKeysOfOtherPlugin.teamsBotIdLocal:
         return isMultiEnvEnable
           ? ctx.localSettings?.bot?.get(LocalSettingsBotKeys.BotId)
-          : ctx.configOfOtherPlugins.get(Plugins.teamsBot)?.get(key);
+          : ctx.envInfo.profile.get(Plugins.teamsBot)?.get(key);
       default:
         return undefined;
     }
@@ -204,7 +204,7 @@ export class SetApplicationInContextConfig {
         if (isArmSupportEnabled()) {
           frontendDomain = getArmOutput(ctx, ConfigKeysOfOtherPlugin.frontendHostingDomainArm);
         } else {
-          frontendDomain = ctx.configOfOtherPlugins
+          frontendDomain = ctx.envInfo.profile
             .get(Plugins.frontendHosting)
             ?.get(ConfigKeysOfOtherPlugin.frontendHostingDomain);
         }
@@ -217,7 +217,7 @@ export class SetApplicationInContextConfig {
 
     const botId: ConfigValue = this.isLocalDebug
       ? ConfigUtils.getLocalDebugConfigOfOtherPlugins(ctx, ConfigKeysOfOtherPlugin.teamsBotIdLocal)
-      : ctx.configOfOtherPlugins.get(Plugins.teamsBot)?.get(ConfigKeysOfOtherPlugin.teamsBotId);
+      : ctx.envInfo.profile.get(Plugins.teamsBot)?.get(ConfigKeysOfOtherPlugin.teamsBotId);
     if (botId) {
       this.botId = format(botId as string, Formats.UUID);
     }
@@ -271,7 +271,7 @@ export class PostProvisionConfig {
         if (isArmSupportEnabled()) {
           frontendEndpoint = getArmOutput(ctx, ConfigKeysOfOtherPlugin.frontendHostingEndpointArm);
         } else {
-          frontendEndpoint = ctx.configOfOtherPlugins
+          frontendEndpoint = ctx.envInfo.profile
             .get(Plugins.frontendHosting)
             ?.get(ConfigKeysOfOtherPlugin.frontendHostingEndpoint);
         }
@@ -287,9 +287,7 @@ export class PostProvisionConfig {
           ctx,
           ConfigKeysOfOtherPlugin.localDebugBotEndpoint
         )
-      : ctx.configOfOtherPlugins
-          .get(Plugins.teamsBot)
-          ?.get(ConfigKeysOfOtherPlugin.teamsBotEndpoint);
+      : ctx.envInfo.profile.get(Plugins.teamsBot)?.get(ConfigKeysOfOtherPlugin.teamsBotEndpoint);
     if (botEndpoint) {
       this.botEndpoint = format(botEndpoint as string, Formats.Endpoint);
     }
@@ -351,5 +349,57 @@ export class UpdatePermissionConfig {
     }
 
     this.permissionRequest = await ConfigUtils.getPermissionRequest(ctx);
+  }
+}
+
+export class CheckGrantPermissionConfig {
+  public userInfo?: any;
+  public objectId?: string;
+  public isGrantPermission: boolean;
+
+  constructor(isGrantPermission = false) {
+    this.isGrantPermission = isGrantPermission;
+  }
+
+  public async restoreConfigFromContext(ctx: PluginContext): Promise<void> {
+    const objectId: ConfigValue = ctx.config?.get(ConfigKeys.objectId);
+    if (objectId) {
+      this.objectId = objectId as string;
+    } else {
+      throw ResultFactory.SystemError(
+        GetConfigError.name,
+        Utils.getPermissionErrorMessage(
+          GetConfigError.message(Errors.GetConfigError(ConfigKeys.objectId, Plugins.pluginName)),
+          this.isGrantPermission
+        )
+      );
+    }
+
+    const userInfo: ConfigValue = ctx.envInfo.profile
+      ?.get(Plugins.solution)
+      ?.get(ConfigKeysOfOtherPlugin.solutionUserInfo);
+    if (!userInfo) {
+      throw ResultFactory.SystemError(
+        GetConfigError.name,
+        Utils.getPermissionErrorMessage(
+          Errors.GetConfigError(ConfigKeysOfOtherPlugin.solutionUserInfo, Plugins.solution),
+          this.isGrantPermission,
+          this.objectId
+        )
+      );
+    }
+
+    try {
+      this.userInfo = JSON.parse(userInfo);
+    } catch (error) {
+      throw ResultFactory.SystemError(
+        GetConfigError.name,
+        Utils.getPermissionErrorMessage(
+          GetConfigError.message(error.message),
+          this.isGrantPermission,
+          this.objectId
+        )
+      );
+    }
   }
 }

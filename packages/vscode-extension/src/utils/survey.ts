@@ -3,6 +3,7 @@ import { globalStateGet, globalStateUpdate } from "@microsoft/teamsfx-core";
 import { ExtTelemetry } from "../telemetry/extTelemetry";
 import { TelemetryEvent } from "../telemetry/extTelemetryEvents";
 import * as StringResources from "../resources/Strings.json";
+import { TreatmentVariableValue } from "../exp/treatmentVariables";
 
 const SURVEY_URL = "https://aka.ms/teams-toolkit-survey";
 
@@ -12,25 +13,34 @@ enum ExtensionSurveyStateKeys {
   DisableSurveyForTime = "survey/disableSurveyForTime",
 }
 
-const TIME_TO_DISABLE_SURVEY = 1000 * 60 * 60 * 24 * 7 * 12; // 4 weeks
-const TIME_TO_SHOW_SURVEY = 1000 * 60 * 7; // 7 minutes
+const TIME_TO_DISABLE_SURVEY = 1000 * 60 * 60 * 24 * 7 * 12; // 12 weeks
+const TIME_TO_REMIND_ME_LATER = 1000 * 60 * 60 * 24 * 7 * 2; // 2 weeks
+const TIME_TO_SHOW_SURVEY = 1000 * 60 * 15; // 15 minutes
 const SAMPLE_PERCENTAGE = 25; // 25 percent for public preview
 
 export class ExtensionSurvey {
-  private context: vscode.ExtensionContext;
   private timeToShowSurvey: number;
   private timeToDisableSurvey: number;
+  private timeToRemindMeLater: number;
   private checkSurveyInterval?: NodeJS.Timeout;
   private showSurveyTimeout?: NodeJS.Timeout;
   private needToShow = false;
+  private static instance: ExtensionSurvey;
 
-  constructor(
-    context: vscode.ExtensionContext,
+  public static getInstance(): ExtensionSurvey {
+    if (!ExtensionSurvey.instance) {
+      ExtensionSurvey.instance = new ExtensionSurvey();
+    }
+
+    return ExtensionSurvey.instance;
+  }
+
+  private constructor(
     timeToShowSurvey?: number,
     samplePercentage?: number,
-    timeToDisableSurvey?: number
+    timeToDisableSurvey?: number,
+    timeToRemindMeLater?: number
   ) {
-    this.context = context;
     this.timeToShowSurvey = timeToShowSurvey ? timeToShowSurvey : TIME_TO_SHOW_SURVEY;
 
     const randomSample: number = Math.floor(Math.random() * 100) + 1;
@@ -38,23 +48,36 @@ export class ExtensionSurvey {
       this.needToShow = true;
     }
     this.timeToDisableSurvey = timeToDisableSurvey ? timeToDisableSurvey : TIME_TO_DISABLE_SURVEY;
+    this.timeToRemindMeLater = timeToRemindMeLater ? timeToRemindMeLater : TIME_TO_REMIND_ME_LATER;
   }
 
   public async activate(): Promise<void> {
-    if (this.needToShow && !this.checkSurveyInterval) {
-      this.checkSurveyInterval = setInterval(() => {
+    if (TreatmentVariableValue.isEmbeddedSurvey) {
+      if (this.needToShow) {
         if (!this.shouldShowBanner()) {
           return;
         }
 
-        if (!this.showSurveyTimeout && ExtTelemetry.hasSentTelemetry) {
-          this.showSurveyTimeout = setTimeout(() => this.showSurvey(), this.timeToShowSurvey);
-        }
-      }, 2000);
+        setTimeout(() => {
+          this.showSurvey();
+        }, 200);
+      }
+    } else {
+      if (this.needToShow && !this.checkSurveyInterval) {
+        this.checkSurveyInterval = setInterval(() => {
+          if (!this.shouldShowBanner()) {
+            return;
+          }
+
+          if (!this.showSurveyTimeout && ExtTelemetry.hasSentTelemetry) {
+            this.showSurveyTimeout = setTimeout(() => this.showSurvey(), this.timeToShowSurvey);
+          }
+        }, 2000);
+      }
     }
   }
 
-  public shouldShowBanner(): boolean {
+  private shouldShowBanner(): boolean {
     const doNotShowAgain = globalStateGet(ExtensionSurveyStateKeys.DoNotShowAgain, false);
     if (doNotShowAgain) {
       return false;
@@ -74,7 +97,11 @@ export class ExtensionSurvey {
     return true;
   }
 
-  public async showSurvey(): Promise<void> {
+  private async showWebviewSurvey(): Promise<void> {
+    vscode.commands.executeCommand("fx-extension.openSurvey");
+  }
+
+  private async showSurvey(): Promise<void> {
     const extension = vscode.extensions.getExtension("TeamsDevApp.ms-teams-vscode-extension");
     if (!extension) {
       return;
@@ -87,14 +114,20 @@ export class ExtensionSurvey {
         ExtTelemetry.sendTelemetryEvent(TelemetryEvent.Survey, {
           message: StringResources.vsc.survey.takeSurvey.message,
         });
-        vscode.commands.executeCommand(
-          "vscode.open",
-          vscode.Uri.parse(
-            `${SURVEY_URL}?o=${encodeURIComponent(process.platform)}&v=${encodeURIComponent(
-              extensionVersion
-            )}`
-          )
-        );
+
+        if (TreatmentVariableValue.isEmbeddedSurvey) {
+          this.showWebviewSurvey();
+        } else {
+          vscode.commands.executeCommand(
+            "vscode.open",
+            vscode.Uri.parse(
+              `${SURVEY_URL}?o=${encodeURIComponent(process.platform)}&v=${encodeURIComponent(
+                extensionVersion
+              )}`
+            )
+          );
+        }
+
         const disableSurveyForTime = Date.now() + this.timeToDisableSurvey;
         await globalStateUpdate(
           ExtensionSurveyStateKeys.DisableSurveyForTime,
@@ -109,6 +142,8 @@ export class ExtensionSurvey {
         ExtTelemetry.sendTelemetryEvent(TelemetryEvent.Survey, {
           message: StringResources.vsc.survey.remindMeLater.message,
         });
+        const disableSurveyForTime = Date.now() + this.timeToRemindMeLater;
+        await globalStateUpdate(ExtensionSurveyStateKeys.RemindMeLater, disableSurveyForTime);
       },
     };
 
@@ -143,6 +178,11 @@ export class ExtensionSurvey {
       ExtTelemetry.sendTelemetryEvent(TelemetryEvent.Survey, {
         message: StringResources.vsc.survey.cancelMessage,
       });
+      const disableSurveyForTime = Date.now() + this.timeToRemindMeLater;
+      await globalStateUpdate(ExtensionSurveyStateKeys.RemindMeLater, disableSurveyForTime);
     }
+
+    // only pop out once in one session
+    this.needToShow = false;
   }
 }

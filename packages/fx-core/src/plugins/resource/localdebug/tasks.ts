@@ -9,6 +9,8 @@ export function generateTasks(
   includeFrontend: boolean,
   includeBackend: boolean,
   includeBot: boolean,
+  includeAuth: boolean,
+  isMigrateFromV1: boolean,
   programmingLanguage: string
 ): Record<string, unknown>[] {
   /**
@@ -28,13 +30,17 @@ export function generateTasks(
    *   - backend extensions install
    *   - bot npm install
    */
-  const tasks: Record<string, unknown>[] = [preDebugCheck(includeBot), dependencyCheck()];
+  const tasks: Record<string, unknown>[] = [preDebugCheck(includeBot, isMigrateFromV1)];
+  if (!isMigrateFromV1) {
+    tasks.push(dependencyCheck());
+  }
+
   if (includeBot) {
     tasks.push(startNgrok());
   }
   tasks.push(prepareDevEnv(includeFrontend, includeBackend), prepareLocalEnvironment());
   if (includeFrontend) {
-    tasks.push(startFrontend(), frontendNpmInstall());
+    tasks.push(startFrontend(includeAuth), frontendNpmInstall());
     if (includeBackend) {
       tasks.push(
         startBackend(programmingLanguage),
@@ -70,7 +76,7 @@ export function generateSpfxTasks(): Record<string, unknown>[] {
       command: "echo ${command:fx-extension.validate-spfx-dependencies}",
     },
     {
-      label: "npm install",
+      label: "spfx npm install",
       type: "shell",
       command: "npm install",
       options: {
@@ -86,7 +92,7 @@ export function generateSpfxTasks(): Record<string, unknown>[] {
       options: {
         cwd: "${workspaceFolder}/SPFx",
       },
-      dependsOn: "npm install",
+      dependsOn: "spfx npm install",
     },
     {
       label: "gulp serve",
@@ -117,6 +123,16 @@ export function generateSpfxTasks(): Record<string, unknown>[] {
       dependsOn: "gulp trust-dev-cert",
     },
     {
+      label: "prepare local environment",
+      type: "shell",
+      command: "echo ${command:fx-extension.pre-debug-check}",
+    },
+    {
+      label: "prepare dev env",
+      dependsOn: ["prepare local environment", "gulp serve"],
+      dependsOrder: "parallel",
+    },
+    {
       label: "Terminate All Tasks",
       command: "echo ${input:terminate}",
       type: "shell",
@@ -125,11 +141,15 @@ export function generateSpfxTasks(): Record<string, unknown>[] {
   ];
 }
 
-function preDebugCheck(includeBot: boolean): Record<string, unknown> {
+function preDebugCheck(includeBot: boolean, isMigrateFromV1: boolean): Record<string, unknown> {
   return {
     label: "Pre Debug Check",
     dependsOn: includeBot
-      ? ["dependency check", "start ngrok", "prepare dev env"]
+      ? isMigrateFromV1
+        ? ["start ngrok", "prepare dev env"]
+        : ["dependency check", "start ngrok", "prepare dev env"]
+      : isMigrateFromV1
+      ? ["prepare dev env"]
       : ["dependency check", "prepare dev env"],
     dependsOrder: "sequence",
   };
@@ -166,10 +186,12 @@ function prepareLocalEnvironment(): Record<string, unknown> {
   };
 }
 
-function startFrontend(): Record<string, unknown> {
+function startFrontend(includeAuth: boolean): Record<string, unknown> {
   return {
     label: "Start Frontend",
-    dependsOn: [`${ProductName}: frontend start`, `${ProductName}: auth start`],
+    dependsOn: includeAuth
+      ? [`${ProductName}: frontend start`, `${ProductName}: auth start`]
+      : [`${ProductName}: frontend start`],
     dependsOrder: "parallel",
   };
 }

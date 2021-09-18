@@ -25,6 +25,7 @@ import jwt_decode from "jwt-decode";
 import { Utils } from "../../../../src/plugins/resource/aad/utils/common";
 import { MockUserInteraction } from "../../../core/utils";
 import { DEFAULT_PERMISSION_REQUEST } from "../../../../src/plugins/solution/fx-solution/constants";
+import { newEnvInfo } from "../../../../src";
 
 const permissions = '[{"resource": "Microsoft Graph","delegated": ["User.Read"],"application":[]}]';
 const permissionsWrong =
@@ -111,6 +112,14 @@ const mockTelemetryReporter: TelemetryReporter = {
   },
 };
 
+const userList = {
+  tenantId: faker.datatype.uuid(),
+  aadId: faker.datatype.uuid(),
+  displayName: "displayName",
+  userPrincipalName: "userPrincipalName",
+  isOwner: true,
+};
+
 export class TestHelper {
   // TODO: update type
   static async pluginContext(
@@ -138,12 +147,12 @@ export class TestHelper {
       ? mockConfigOfOtherPluginsLocalDebug(domain, endpoint, botEndpoint, botId)
       : mockConfigOfOtherPluginsProvision(domain, endpoint, botEndpoint, botId);
 
-    const pluginContext = {
+    const pluginContext: PluginContext = {
       logProvider: mockLogProvider,
       ui: mockUI,
       telemetryReporter: mockTelemetryReporter,
       config: config,
-      configOfOtherPlugins: configOfOtherPlugins,
+      envInfo: newEnvInfo(undefined, undefined, configOfOtherPlugins),
       projectSettings: {
         appName: "aad-plugin-unit-test",
       },
@@ -163,7 +172,10 @@ function mockConfigOfOtherPluginsProvision(
   return new Map([
     [
       Plugins.solution,
-      new Map([[ConfigKeysOfOtherPlugin.remoteTeamsAppId, faker.datatype.uuid()]]),
+      new Map([
+        [ConfigKeysOfOtherPlugin.remoteTeamsAppId, faker.datatype.uuid()],
+        [ConfigKeysOfOtherPlugin.solutionUserInfo, JSON.stringify(userList)],
+      ]),
     ],
     [
       Plugins.frontendHosting,

@@ -16,6 +16,7 @@ import { SqlClient } from "../../../../../src/plugins/resource/sql/sqlClient";
 import { Constants } from "../../../../../src/plugins/resource/sql/constants";
 import * as commonUtils from "../../../../../src/plugins/resource/sql/utils/commonUtils";
 import { UserType } from "../../../../../src/plugins/resource/sql/utils/commonUtils";
+import { ManagementClient } from "../../../../../src/plugins/resource/sql/managementClient";
 
 chai.use(chaiAsPromised);
 
@@ -43,7 +44,7 @@ describe("sqlPlugin", () => {
     sinon.restore();
   });
 
-  it("getQuestions", async function () {
+  it("getQuestions without sql", async function () {
     // Arrange
     sinon.stub(Servers.prototype, "checkNameAvailability").resolves({ available: true });
     // Act
@@ -53,8 +54,29 @@ describe("sqlPlugin", () => {
     chai.assert.isTrue(getQuestionResult.isOk());
   });
 
+  it("getQuestions with sql", async function () {
+    // Arrange
+    sinon.stub(Servers.prototype, "checkNameAvailability").resolves({ available: false });
+    // Act
+    const getQuestionResult = await sqlPlugin.getQuestions(Stage.provision, pluginContext);
+
+    // Assert
+    chai.assert.isTrue(getQuestionResult.isOk());
+  });
+
+  it("getQuestions in cli help", async function () {
+    // Arrange
+    pluginContext.answers === { platform: Platform.CLI_HELP };
+    // Act
+    const getQuestionResult = await sqlPlugin.getQuestions(Stage.provision, pluginContext);
+
+    // Assert
+    chai.assert.isTrue(getQuestionResult.isOk());
+  });
+
   it("preProvision", async function () {
     // Arrange
+    sinon.stub(Servers.prototype, "checkNameAvailability").resolves({ available: false });
     sinon
       .stub(ApplicationTokenCredentials.prototype, "getToken")
       .resolves({ accessToken: faker.random.word() } as TokenResponse);
@@ -75,6 +97,21 @@ describe("sqlPlugin", () => {
     chai.assert.isTrue(preProvisionResult.isOk());
   });
 
+  it("preProvision failed for no answer", async function () {
+    // Arrange
+    sinon.stub(Servers.prototype, "checkNameAvailability").resolves({ available: false });
+    sinon
+      .stub(ApplicationTokenCredentials.prototype, "getToken")
+      .resolves({ accessToken: faker.random.word() } as TokenResponse);
+    pluginContext.answers = { platform: Platform.VSCode };
+
+    // Act
+    const preProvisionResult = await sqlPlugin.preProvision(pluginContext);
+
+    // Assert
+    chai.assert.isTrue(preProvisionResult.isErr());
+  });
+
   it("provision", async function () {
     sqlPlugin.sqlImpl.config.existSql = false;
     sqlPlugin.sqlImpl.config.sqlServer = "test-sql";
@@ -84,6 +121,7 @@ describe("sqlPlugin", () => {
     sinon.stub(Databases.prototype, "listByServer").resolves();
     sinon.stub(Databases.prototype, "createOrUpdate").resolves();
     sinon.stub(Providers.prototype, "register").resolves();
+    sinon.stub(ManagementClient.prototype, "delay").resolves();
 
     // Act
     const provisionResult = await sqlPlugin.provision(pluginContext);

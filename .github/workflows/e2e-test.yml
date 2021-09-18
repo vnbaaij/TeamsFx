@@ -17,6 +17,8 @@ jobs:
       M365_ACCOUNT_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
       M365_TENANT_ID: ${{ secrets.TEST_TENANT_ID_2 }}
       CI_ENABLED: "true"
+      M365_ACCOUNT_COLLABORATOR: ${{ secrets.TEST_COLLABORATOR_USER_NAME }}
+      AZURE_DEVOPS_EXT_PAT: ${{ secrets.ADO_PAT }}
 
     runs-on: [self-hosted, linux, 8cpu]
 
@@ -41,7 +43,7 @@ jobs:
           retry_on: error
           shell: pwsh
           command: |
-            ./.github/scripts/downloadSimpleAuth.ps1
+            ./.github/scripts/download-simpleauth.sh
 
       - name: Setup project
         uses: nick-invision/retry@v2
@@ -75,10 +77,76 @@ jobs:
           git push origin -f e2e
 
       - name: Clean the Repo
+        if: ${{ always() }}
         run: |
           rsync --delete-before -d /tmp/empty/ ./
 
+      - name: Sync to Azure DevOps Test Plan
+        if: ${{ always() && github.ref == 'refs/heads/main' }}
+        run: |
+          version =$(node -p -e "require('./packages/cli/package.json').version")
+          npx ts-node .github/scripts/testPlan.ts sync ./packages/cli/report.json cli $version
+
+      - name: Upload test report
+        uses: actions/upload-artifact@v2
+        if: failure()
+        with:
+          name: report.json
+          path: |
+            ./packages/cli/report.json
+
+  report-stat:
+    env:
+      AZURE_DEVOPS_EXT_PAT: ${{ secrets.ADO_PAT }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          token: ${{ secrets.CD_PAT }}
+          ref: ${{ github.ref }}
+          clean: false
+
+      - name: Setup node
+        uses: actions/setup-node@v2.1.2
+        with:
+          node-version: 14
+
+      - name: Download Simple Auth bits
+        uses: nick-invision/retry@v2
+        with:
+          timeout_minutes: 10
+          max_attempts: 10
+          retry_on: error
+          shell: pwsh
+          command: |
+            ./.github/scripts/download-simpleauth.sh
+
+      - name: Setup project
+        uses: nick-invision/retry@v2
+        with:
+          timeout_minutes: 10
+          max_attempts: 10
+          retry_on: error
+          command: |
+            npm run setup
+
+      - name: report cli e2e tests stat
+        run: |
+          manual_cases=`npx ts-node .github/scripts/testPlan.ts stat cli | jq '.points'`
+          cd packages/cli
+          auto_cases=`npx mocha --reporter=spec --dry-run tests/e2e/**/*.tests.ts | grep passing | awk '{print $1}'`
+          pct=`printf %.4f "$((10**4 * $auto_cases*100/$manual_cases))e-4"`
+
+          az storage entity insert \
+            --connection-string "${{ secrets.AZURE_STORAGE_ACCOUNT_TEAMSFXCLIDOWNLOADS_CS }}" \
+            --entity PartitionKey=TeamsFx RowKey=${{ github.run_id }}_cli Package=cli GitBranch=${{ github.ref }} Type=e2e_test AutomatedCases=$auto_cases ManualCases=$manual_cases AutomationPct=$pct \
+            --if-exists replace \
+            --table-name TestCoverage
+
   create-ado-issue:
+    env:
+      AZURE_DEVOPS_EXT_PAT: ${{ secrets.ADO_PAT }}
     runs-on: ubuntu-latest
     needs: e2e-tests
     if: ${{ failure() && (github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/main') }}
@@ -115,6 +183,7 @@ jobs:
             }
             description="$description <tr> <td>$(_jq '.commit')</td> <td>$(_jq '.subject')</td> <td>$(_jq '.date')</td> <td><a href=\"#\" data-vss-mention=\"version:2.0,${email_uid[$(_jq '.email')]}\">$(_jq '.email')</a></td> </tr> "
           done
+          description=`echo $description | sed -e 's/"/\\\"/g'`
           echo "::set-output name=description::$description"
 
       - name: Create azure devops issue if test is failed
@@ -122,7 +191,6 @@ jobs:
         with:
           azcliversion: 2.25.0
           inlineScript: |
-            export AZURE_DEVOPS_EXT_PAT=${{ secrets.ADO_PAT }}
             az extension add --name azure-devops
             az boards work-item create --title="E2E tests failed" \
                              --type=Bug \
@@ -133,3 +201,17 @@ jobs:
                              --project="Microsoft Teams Extensibility" \
                              --fields "Microsoft.VSTS.TCM.ReproSteps=<a>https://github.com/OfficeDev/TeamsFx/actions/runs/${{ github.run_id }}</a>" "Microsoft.VSTS.Common.Triage=Triaged" \
                              --description="<table class=\"w3-table w3-striped w3-bordered\">${{ steps.git-log.outputs.description }}</table>"
+
+      - name: Send E-mail to the whole team
+        if: ${{ always() }}
+        uses: satak/webrequest-action@master
+        with:
+          url: https://prod-30.eastus.logic.azure.com:443/workflows/9aa865da96054bd89749c2d4ce68df8e/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=uIoB06NUHSnKoZeWjNDI9t4rrhbTBKxJNiBtDoMRSQs
+          method: POST
+          payload: |
+            {
+              "to": "vsciotadt@microsoft.com",
+              "body": "TeamsFx CLI E2E Test failed <table class=\"w3-table w3-striped w3-bordered\">${{ steps.git-log.outputs.description }}</table>The detail can be found here: https://github.com/OfficeDev/TeamsFx/actions/runs/${{ github.run_id }}",
+              "subject": "[Failure] TeamsFx CLI E2E Test ${{ github.run-id }}",
+              "apiKey": "${{ secrets.MAIL_API_KEY }}"
+            }

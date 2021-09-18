@@ -8,7 +8,11 @@
   "exclude": [
     "src/cmds/preview/depsChecker/**/*",
     "src/cmds/preview/preview.ts",
-    "src/index.ts"
+    "src/index.ts",
+    "cli.js",
+    ".eslintrc.js",
+    ".prettierrc.js",
+    ".mocharc.js"
   ],
   "reporter": [
     "html",

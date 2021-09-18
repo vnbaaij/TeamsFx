@@ -9,6 +9,7 @@ import * as path from "path";
 import { LocalDebugPluginInfo } from "../../../../../src/plugins/resource/localdebug/constants";
 import { LocalDebugPlugin } from "../../../../../src/plugins/resource/localdebug";
 import * as uuid from "uuid";
+import { newEnvInfo } from "../../../../../src";
 chai.use(chaiAsPromised);
 
 interface TestParameter {
@@ -32,6 +33,7 @@ describe(LocalDebugPluginInfo.pluginName, () => {
     beforeEach(() => {
       pluginContext = {
         root: path.resolve(__dirname, "../data/"),
+        envInfo: newEnvInfo(),
         config: new Map(),
         answers: { platform: Platform.VSCode },
       } as PluginContext;
@@ -57,9 +59,11 @@ describe(LocalDebugPluginInfo.pluginName, () => {
     ];
     parameters1.forEach((parameter: TestParameter) => {
       it(`happy path: tab with function (${parameter.programmingLanguage})`, async () => {
-        pluginContext.configOfOtherPlugins = new Map([
-          ["solution", new Map([["programmingLanguage", parameter.programmingLanguage]])],
-        ]);
+        pluginContext.envInfo = newEnvInfo(
+          undefined,
+          undefined,
+          new Map([["solution", new Map([["programmingLanguage", parameter.programmingLanguage]])]])
+        );
         pluginContext.projectSettings = {
           appName: "",
           projectId: uuid.v4(),
@@ -68,6 +72,7 @@ describe(LocalDebugPluginInfo.pluginName, () => {
             version: "",
             activeResourcePlugins: [
               "fx-resource-aad-app-for-teams",
+              "fx-resource-simple-auth",
               "fx-resource-frontend-hosting",
               "fx-resource-function",
             ],
@@ -119,9 +124,11 @@ describe(LocalDebugPluginInfo.pluginName, () => {
     ];
     parameters2.forEach((parameter) => {
       it(`happy path: tab without function (${parameter.programmingLanguage})`, async () => {
-        pluginContext.configOfOtherPlugins = new Map([
-          ["solution", new Map([["programmingLanguage", parameter.programmingLanguage]])],
-        ]);
+        pluginContext.envInfo = newEnvInfo(
+          undefined,
+          undefined,
+          new Map([["solution", new Map([["programmingLanguage", parameter.programmingLanguage]])]])
+        );
         pluginContext.projectSettings = {
           appName: "",
           projectId: uuid.v4(),
@@ -130,6 +137,7 @@ describe(LocalDebugPluginInfo.pluginName, () => {
             version: "",
             activeResourcePlugins: [
               "fx-resource-aad-app-for-teams",
+              "fx-resource-simple-auth",
               "fx-resource-frontend-hosting",
             ],
           },
@@ -176,9 +184,11 @@ describe(LocalDebugPluginInfo.pluginName, () => {
     ];
     parameters3.forEach((parameter) => {
       it(`happy path: bot (${parameter.programmingLanguage})`, async () => {
-        pluginContext.configOfOtherPlugins = new Map([
-          ["solution", new Map([["programmingLanguage", parameter.programmingLanguage]])],
-        ]);
+        pluginContext.envInfo = newEnvInfo(
+          undefined,
+          undefined,
+          new Map([["solution", new Map([["programmingLanguage", parameter.programmingLanguage]])]])
+        );
         pluginContext.projectSettings = {
           appName: "",
           projectId: uuid.v4(),
@@ -230,9 +240,11 @@ describe(LocalDebugPluginInfo.pluginName, () => {
     ];
     parameters4.forEach((parameter) => {
       it(`happy path: tab with function and bot (${parameter.programmingLanguage})`, async () => {
-        pluginContext.configOfOtherPlugins = new Map([
-          ["solution", new Map([["programmingLanguage", parameter.programmingLanguage]])],
-        ]);
+        pluginContext.envInfo = newEnvInfo(
+          undefined,
+          undefined,
+          new Map([["solution", new Map([["programmingLanguage", parameter.programmingLanguage]])]])
+        );
         pluginContext.projectSettings = {
           appName: "",
           projectId: uuid.v4(),
@@ -241,6 +253,7 @@ describe(LocalDebugPluginInfo.pluginName, () => {
             version: "",
             activeResourcePlugins: [
               "fx-resource-aad-app-for-teams",
+              "fx-resource-simple-auth",
               "fx-resource-frontend-hosting",
               "fx-resource-function",
               "fx-resource-bot",
@@ -293,9 +306,11 @@ describe(LocalDebugPluginInfo.pluginName, () => {
     ];
     parameters5.forEach((parameter) => {
       it(`happy path: tab without function and bot (${parameter.programmingLanguage})`, async () => {
-        pluginContext.configOfOtherPlugins = new Map([
-          ["solution", new Map([["programmingLanguage", parameter.programmingLanguage]])],
-        ]);
+        pluginContext.envInfo = newEnvInfo(
+          undefined,
+          undefined,
+          new Map([["solution", new Map([["programmingLanguage", parameter.programmingLanguage]])]])
+        );
         pluginContext.projectSettings = {
           appName: "",
           projectId: uuid.v4(),
@@ -305,6 +320,7 @@ describe(LocalDebugPluginInfo.pluginName, () => {
             activeResourcePlugins: [
               "fx-resource-aad-app-for-teams",
               "fx-resource-frontend-hosting",
+              "fx-resource-simple-auth",
               "fx-resource-bot",
             ],
           },
@@ -334,7 +350,7 @@ describe(LocalDebugPluginInfo.pluginName, () => {
     });
 
     it("spfx", async () => {
-      pluginContext.configOfOtherPlugins = new Map();
+      pluginContext.envInfo = newEnvInfo();
       pluginContext.projectSettings = {
         appName: "",
         projectId: uuid.v4(),
@@ -350,13 +366,15 @@ describe(LocalDebugPluginInfo.pluginName, () => {
       //assert output launch.json
       const launch = fs.readJSONSync(expectedLaunchFile);
       const configurations: [] = launch["configurations"];
-      chai.assert.equal(configurations.length, 4);
+      const compounds: [] = launch["compounds"];
+      chai.assert.equal(configurations.length, 6);
+      chai.assert.equal(compounds.length, 2);
 
       //assert output tasks.json
       const tasksAll = fs.readJSONSync(expectedTasksFile);
       const tasks: [] = tasksAll["tasks"];
       const tasksInput: [] = tasksAll["inputs"];
-      chai.assert.equal(tasks.length, 5);
+      chai.assert.equal(tasks.length, 7);
       chai.assert.equal(tasksInput.length, 1);
 
       //no settings.json
@@ -368,7 +386,11 @@ describe(LocalDebugPluginInfo.pluginName, () => {
 
     it("cli", async () => {
       pluginContext.answers!.platform = Platform.CLI;
-      pluginContext.configOfOtherPlugins = new Map([["fx-resource-function", new Map()]]);
+      pluginContext.envInfo = newEnvInfo(
+        undefined,
+        undefined,
+        new Map([["fx-resource-function", new Map()]])
+      );
       pluginContext.projectSettings = {
         appName: "",
         projectId: uuid.v4(),
@@ -399,6 +421,60 @@ describe(LocalDebugPluginInfo.pluginName, () => {
       chai.assert.isFalse(fs.existsSync(expectedSettingsFile));
       chai.assert.isFalse(fs.existsSync(expectedLocalEnvFile));
     });
+
+    const parameters6: TestParameter[] = [
+      {
+        programmingLanguage: "javascript",
+        numConfigurations: 2,
+        numCompounds: 2,
+        numTasks: 5,
+        numLocalEnvs: 2,
+      },
+      {
+        programmingLanguage: "typescript",
+        numConfigurations: 2,
+        numCompounds: 2,
+        numTasks: 5,
+        numLocalEnvs: 2,
+      },
+    ];
+    parameters6.forEach((parameter: TestParameter) => {
+      it(`happy path: tab migrate from v1 (${parameter.programmingLanguage})`, async () => {
+        pluginContext.envInfo = newEnvInfo(
+          undefined,
+          undefined,
+          new Map([["solution", new Map([["programmingLanguage", parameter.programmingLanguage]])]])
+        );
+        pluginContext.projectSettings = {
+          appName: "",
+          projectId: uuid.v4(),
+          solutionSettings: {
+            name: "",
+            version: "",
+            activeResourcePlugins: ["fx-resource-frontend-hosting"],
+            migrateFromV1: true,
+          },
+        };
+        const result = await plugin.scaffold(pluginContext);
+        chai.assert.isTrue(result.isOk());
+
+        //assert output launch.json
+        const launch = fs.readJSONSync(expectedLaunchFile);
+        const configurations: [] = launch["configurations"];
+        const compounds: [] = launch["compounds"];
+        chai.assert.equal(configurations.length, parameter.numConfigurations);
+        chai.assert.equal(compounds.length, parameter.numCompounds);
+
+        //assert output tasks.json
+        const tasksAll = fs.readJSONSync(expectedTasksFile);
+        const tasks: [] = tasksAll["tasks"];
+        chai.assert.equal(tasks.length, parameter.numTasks);
+
+        //assert output local.env
+        const localEnvs = dotenv.parse(fs.readFileSync(expectedLocalEnvFile));
+        chai.assert.equal(Object.keys(localEnvs).length, parameter.numLocalEnvs);
+      });
+    });
   });
 
   describe("localDebug", () => {
@@ -406,7 +482,9 @@ describe(LocalDebugPluginInfo.pluginName, () => {
     let plugin: LocalDebugPlugin;
 
     beforeEach(() => {
-      pluginContext = {} as PluginContext;
+      pluginContext = {
+        envInfo: newEnvInfo(),
+      } as PluginContext;
       plugin = new LocalDebugPlugin();
     });
 
@@ -421,7 +499,9 @@ describe(LocalDebugPluginInfo.pluginName, () => {
     let plugin: LocalDebugPlugin;
 
     beforeEach(() => {
-      pluginContext = {} as PluginContext;
+      pluginContext = {
+        envInfo: newEnvInfo(),
+      } as PluginContext;
       plugin = new LocalDebugPlugin();
     });
 

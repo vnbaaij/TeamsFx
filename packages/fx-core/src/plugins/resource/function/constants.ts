@@ -25,6 +25,7 @@ export class FunctionPluginInfo {
     FunctionConfigKey.storageAccountName,
     FunctionConfigKey.appServicePlanName,
     FunctionConfigKey.functionEndpoint,
+    FunctionConfigKey.functionAppId,
   ];
 
   public static readonly templateBaseGroupName: string = "function-base";
@@ -34,11 +35,9 @@ export class FunctionPluginInfo {
 
 export class FunctionPluginPathInfo {
   public static readonly solutionFolderName: string = "api";
-  // public static readonly rootPath: string = path.join(__dirname, "..", "..", "..", "..");
-  // public static readonly templateFolderPath: string = path.join("templates", "plugins", "resource", "function");
-  public static readonly templateFileExt: string = ".tpl";
   public static readonly templateZipExt: string = ".zip";
   public static readonly templateZipNameSep: string = ".";
+  public static readonly templateFolderName: string = "function";
   public static readonly functionExtensionsFolderName: string = "bin";
   public static readonly functionExtensionsFileName: string = "extensions.csproj";
   public static readonly funcDeploymentFolderName: string = ".deployment";
@@ -179,4 +178,18 @@ export class Commands {
 
 export class QuestionValidationFunc {
   public static readonly validateFunctionName: string = "validateFunctionName";
+}
+
+export class FunctionBicep {
+  static readonly functionEndpoint: string = "functionProvision.outputs.functionEndpoint";
+}
+
+export class FunctionArmOutput {
+  static readonly Endpoint: string = "function_functionEndpoint";
+  static readonly AppResourceId: string = "function_appResourceId";
+}
+
+export class FunctionBicepFile {
+  static readonly provisionModuleTemplateFileName: string = "functionProvision.template.bicep";
+  static readonly configurationTemplateFileName: string = "functionConfiguration.template.bicep";
 }

@@ -1,6 +1,8 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
+import { ArchiveFolderName } from "@microsoft/teamsfx-api";
+
 export class Messages {
   public static readonly SomethingIsInvalidWithValue = (something: string, value: string): string =>
     `'${something}' is invalid with value: '${value}'.`;
@@ -44,6 +46,8 @@ export class Messages {
     "Falling back to use local template zip.";
   public static readonly ResourceProviderExist = (rp: string): string =>
     `Resource Provider ${rp} already exists, do not need to register.`;
+  public static readonly BotResourceExist = (where: string): string =>
+    `Bot resource already existed on ${where}, skip creating Bot resource.`;
 
   public static readonly WorkingDirIsMissing = "Working directory is missing.";
   public static readonly FailToGetAzureCreds = "Failed to retrieve Azure credentials.";
@@ -62,6 +66,13 @@ export class Messages {
   public static readonly DeployingBot = "Deploying bot.";
   public static readonly SuccessfullyDeployedBot = "Successfully deployed bot.";
 
+  public static readonly GeneratingArmTemplatesBot = "Generating ARM templates of bot.";
+  public static readonly SuccessfullyGenerateArmTemplatesBot =
+    "Successfully generating ARM templates of bot.";
+
+  public static readonly SuccessfullyGetExistingBotAadAppCredential =
+    "Successfully get existing bot AAD app credential.";
+  public static readonly SuccessfullyCreatedBotAadApp = "Successfully created bot AAD app.";
   public static readonly ProvisioningAzureBotChannelRegistration =
     "Provisioning azure bot channel registration.";
   public static readonly SuccessfullyProvisionedAzureBotChannelRegistration =
@@ -98,8 +109,6 @@ export class Messages {
     "The subscription didn't register to use namespace 'Microsoft.BotService'.";
   public static readonly MaxFreeAppServicePlanIsTen =
     "The maximum number of Free App Service Plan allowed in a Subscription is 10.";
-  public static readonly RemindUsersToUpdateMessageEndpoint = (messageEndpoint: string): string =>
-    `Before running this bot, please manually update bot's message endpoint(${messageEndpoint}). Click 'Get Help' button for more details.`;
 
   // Suggestions
   public static readonly RetryTheCurrentStep = "Please retry the current step.";
@@ -119,4 +128,12 @@ export class Messages {
     "Please check log in output channel and try to fix this issue.";
   public static readonly RegisterRequiredRP = (resourceProviders: string[]): string =>
     `Register ${resourceProviders.join(",")} resource provider for your subscription manually.`;
+  public static readonly ReopenWorkingDir =
+    "Please check whether the working directory path is valid, if no, please move the project to a valid working directory path.";
+  public static readonly PostProvisioningStart = "Start to Post Provision.";
+
+  // for the use of migrating v1 project
+  public static readonly StartMigrateV1Project = (name: string) => `Migrating '${name}'.`;
+  public static readonly EndMigrateV1Project = (name: string) => `Successfully migrated '${name}'.`;
+  public static readonly RollbackToV1Project = `Rollback your project from '${ArchiveFolderName}' folder.`;
 }

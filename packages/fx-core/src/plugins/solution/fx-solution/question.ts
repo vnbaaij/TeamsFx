@@ -9,6 +9,7 @@ import {
   returnSystemError,
   SingleSelectQuestion,
   StaticOptions,
+  TextInputQuestion,
   Void,
 } from "@microsoft/teamsfx-api";
 import { SolutionError } from "./constants";
@@ -39,6 +40,7 @@ export const MessageExtensionItem: OptionItem = {
 
 export enum AzureSolutionQuestionNames {
   Capabilities = "capabilities",
+  V1Capability = "v1-capability",
   TabScopes = "tab-scopes",
   HostType = "host-type",
   AzureResources = "azure-resources",
@@ -86,6 +88,18 @@ export function createCapabilityQuestion(): MultiSelectQuestion {
     staticOptions: [TabOptionItem, BotOptionItem, MessageExtensionItem],
     default: [TabOptionItem.id],
     placeholder: "Select at least 1 capability",
+    validation: { minItems: 1 },
+  };
+}
+
+export function createV1CapabilityQuestion(): SingleSelectQuestion {
+  return {
+    name: AzureSolutionQuestionNames.V1Capability,
+    title: "Select capability",
+    type: "singleSelect",
+    staticOptions: [TabOptionItem, BotOptionItem, MessageExtensionItem],
+    default: TabOptionItem.id,
+    placeholder: "Select the same capability as your existing project",
     validation: { minItems: 1 },
   };
 }
@@ -222,5 +236,24 @@ export const ProgrammingLanguageQuestion: SingleSelectQuestion = {
     const hostType = inputs[AzureSolutionQuestionNames.HostType] as string;
     if (HostTypeOptionSPFx.id === hostType) return "SPFx is currently supporting TypeScript only.";
     return "Select a programming language.";
+  },
+};
+
+export const GetUserEmailQuestion: TextInputQuestion = {
+  name: "email",
+  type: "text",
+  title: "Invite a collaborator (email)",
+  validation: {
+    validFunc: (input: string, previousInputs?: Inputs): string | undefined => {
+      if (!input || input.trim() === "") {
+        return "email address cannot be null or empty";
+      }
+
+      const re = /\S+@\S+\.\S+/;
+      if (!re.test(input)) {
+        return "email address is not valid";
+      }
+      return undefined;
+    },
   },
 };

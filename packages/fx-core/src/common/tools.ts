@@ -1,8 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
-import { exec, ExecOptions } from "child_process";
-import * as fs from "fs-extra";
 import {
+  AppPackageFolderName,
   AzureAccountProvider,
   ConfigFolderName,
   ConfigMap,
@@ -16,16 +15,17 @@ import {
   returnUserError,
   SubscriptionInfo,
   UserInteraction,
-  AppPackageFolderName,
 } from "@microsoft/teamsfx-api";
-import { promisify } from "util";
-import axios from "axios";
 import AdmZip from "adm-zip";
-import * as path from "path";
-import * as uuid from "uuid";
+import axios from "axios";
+import { exec, ExecOptions } from "child_process";
+import * as fs from "fs-extra";
 import { glob } from "glob";
-import { getResourceFolder } from "../folder";
 import * as Handlebars from "handlebars";
+import * as path from "path";
+import { promisify } from "util";
+import * as uuid from "uuid";
+import { getResourceFolder } from "../folder";
 import { ConstantString, FeatureFlagName } from "./constants";
 
 Handlebars.registerHelper("contains", (value, array, options) => {
@@ -40,7 +40,7 @@ Handlebars.registerHelper("notContains", (value, array, options) => {
 export const Executor = {
   async execCommandAsync(command: string, options?: ExecOptions) {
     const execAsync = promisify(exec);
-    await execAsync(command, options);
+    return await execAsync(command, options);
   },
 };
 
@@ -138,15 +138,17 @@ const SecretDataMatchers = [
   "fx-resource-bot.bots",
   "fx-resource-bot.composeExtensions",
   "fx-resource-apim.apimClientAADClientSecret",
+  "fx-resource-azure-sql.adminPassword",
 ];
 
-const CryptoDataMatchers = new Set([
+export const CryptoDataMatchers = new Set([
   "fx-resource-aad-app-for-teams.clientSecret",
   "fx-resource-aad-app-for-teams.local_clientSecret",
   "fx-resource-simple-auth.environmentVariableParams",
   "fx-resource-bot.botPassword",
   "fx-resource-bot.localBotPassword",
   "fx-resource-apim.apimClientAADClientSecret",
+  "fx-resource-azure-sql.adminPassword",
 ]);
 
 /**
@@ -402,7 +404,15 @@ export function isMultiEnvEnabled(): boolean {
 }
 
 export function isArmSupportEnabled(): boolean {
-  return isFeatureFlagEnabled("TEAMSFX_ARM_SUPPORT", false);
+  return isFeatureFlagEnabled(FeatureFlagName.ArmSupport, false);
+}
+
+export function isBicepEnvCheckerEnabled(): boolean {
+  return isFeatureFlagEnabled(FeatureFlagName.BicepEnvCheckerEnable, false);
+}
+
+export function isRemoteCollaborateEnabled(): boolean {
+  return isFeatureFlagEnabled(FeatureFlagName.RemoteCollaboration, false);
 }
 
 export async function generateBicepFiles(
@@ -431,13 +441,25 @@ export function compileHandlebarsTemplateString(templateString: string, context:
 
 export async function getAppDirectory(projectRoot: string): Promise<string> {
   const REMOTE_MANIFEST = "manifest.source.json";
+  const MANIFEST_TEMPLATE = "manifest.template.json";
+  const appDirNewLocForMultiEnv = `${projectRoot}/templates/${AppPackageFolderName}`;
   const appDirNewLoc = `${projectRoot}/${AppPackageFolderName}`;
   const appDirOldLoc = `${projectRoot}/.${ConfigFolderName}`;
 
-  if (await fs.pathExists(`${appDirNewLoc}/${REMOTE_MANIFEST}`)) {
-    return appDirNewLoc;
+  if (isMultiEnvEnabled()) {
+    if (await fs.pathExists(`${appDirNewLocForMultiEnv}/${MANIFEST_TEMPLATE}`)) {
+      return appDirNewLocForMultiEnv;
+    } else if (await fs.pathExists(`${appDirNewLoc}/${REMOTE_MANIFEST}`)) {
+      return appDirNewLoc;
+    } else {
+      return appDirOldLoc;
+    }
   } else {
-    return appDirOldLoc;
+    if (await fs.pathExists(`${appDirNewLoc}/${REMOTE_MANIFEST}`)) {
+      return appDirNewLoc;
+    } else {
+      return appDirOldLoc;
+    }
   }
 }
 
@@ -450,4 +472,70 @@ export function getAppStudioEndpoint(): string {
   } else {
     return "https://dev.teams.microsoft.com";
   }
+}
+
+export async function copyFiles(
+  srcPath: string,
+  distPath: string,
+  excludeFileList: { fileName: string; recursive: boolean }[] = []
+): Promise<void> {
+  await fs.ensureDir(distPath);
+
+  const excludeFileNames = excludeFileList.map((file) => file.fileName);
+  const recursiveExcludeFileNames = excludeFileList
+    .filter((file) => file.recursive)
+    .map((file) => file.fileName);
+
+  const fileNames = await fs.readdir(srcPath);
+  for (const fileName of fileNames) {
+    if (excludeFileNames.includes(fileName)) {
+      continue;
+    }
+    await fs.copy(path.join(srcPath, fileName), path.join(distPath, fileName), {
+      overwrite: false,
+      errorOnExist: true,
+      filter: (src: string, dest: string): boolean =>
+        !recursiveExcludeFileNames.includes(path.basename(src)),
+    });
+  }
+}
+
+export function getStorageAccountNameFromResourceId(resourceId: string): string {
+  const result = parseFromResourceId(
+    /providers\/Microsoft.Storage\/storageAccounts\/([^\/]*)/i,
+    resourceId
+  );
+  if (!result) {
+    throw new Error("Failed to get storage accounts name from resource id: " + resourceId);
+  }
+  return result;
+}
+
+export function getSiteNameFromResourceId(resourceId: string): string {
+  const result = parseFromResourceId(/providers\/Microsoft.Web\/sites\/([^\/]*)/i, resourceId);
+  if (!result) {
+    throw new Error("Failed to get site name from resource id: " + resourceId);
+  }
+  return result;
+}
+
+export function getResourceGroupNameFromResourceId(resourceId: string): string {
+  const result = parseFromResourceId(/\/resourceGroups\/([^\/]*)\//i, resourceId);
+  if (!result) {
+    throw new Error("Failed to get resource group name from resource id: " + resourceId);
+  }
+  return result;
+}
+
+export function getSubscriptionIdFromResourceId(resourceId: string): string {
+  const result = parseFromResourceId(/\/subscriptions\/([^\/]*)\//i, resourceId);
+  if (!result) {
+    throw new Error("Failed to get subscription id from resource id: " + resourceId);
+  }
+  return result;
+}
+
+export function parseFromResourceId(pattern: RegExp, resourceId: string): string {
+  const result = resourceId.match(pattern);
+  return result ? result[1].trim() : "";
 }

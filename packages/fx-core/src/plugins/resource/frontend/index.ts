@@ -9,6 +9,7 @@ import {
   UserError,
   AzureSolutionSettings,
   ok,
+  Func,
 } from "@microsoft/teamsfx-api";
 
 import { ErrorFactory, TeamsFxResult } from "./error-factory";
@@ -27,7 +28,7 @@ import { Service } from "typedi";
 import { ResourcePlugins } from "../../solution/fx-solution/ResourcePluginContainer";
 import { isArmSupportEnabled } from "../../..";
 import { ArmResourcePlugin } from "../../../common/armInterface";
-export * from "./v2";
+import "./v2";
 
 @Service(ResourcePlugins.FrontendPlugin)
 export class FrontendPlugin implements Plugin, ArmResourcePlugin {
@@ -52,6 +53,10 @@ export class FrontendPlugin implements Plugin, ArmResourcePlugin {
   }
 
   public async preProvision(ctx: PluginContext): Promise<TeamsFxResult> {
+    if (isArmSupportEnabled()) {
+      return ok(undefined);
+    }
+
     FrontendPlugin.setContext(ctx);
     return this.runWithErrorHandling(ctx, TelemetryEvent.PreProvision, () =>
       this.frontendPluginImpl.preProvision(ctx)
@@ -61,12 +66,12 @@ export class FrontendPlugin implements Plugin, ArmResourcePlugin {
   public async provision(ctx: PluginContext): Promise<TeamsFxResult> {
     if (isArmSupportEnabled()) {
       return ok(undefined);
-    } else {
-      FrontendPlugin.setContext(ctx);
-      return this.runWithErrorHandling(ctx, TelemetryEvent.Provision, () =>
-        this.frontendPluginImpl.provision(ctx)
-      );
     }
+
+    FrontendPlugin.setContext(ctx);
+    return this.runWithErrorHandling(ctx, TelemetryEvent.Provision, () =>
+      this.frontendPluginImpl.provision(ctx)
+    );
   }
 
   public async postProvision(ctx: PluginContext): Promise<TeamsFxResult> {
@@ -97,15 +102,26 @@ export class FrontendPlugin implements Plugin, ArmResourcePlugin {
     );
   }
 
+  public async executeUserTask(func: Func, ctx: PluginContext): Promise<TeamsFxResult> {
+    FrontendPlugin.setContext(ctx);
+    return this.runWithErrorHandling(
+      ctx,
+      TelemetryEvent.ExecuteUserTask,
+      () => this.frontendPluginImpl.executeUserTask(func, ctx),
+      { method: func.method }
+    );
+  }
+
   private async runWithErrorHandling(
     ctx: PluginContext,
     stage: string,
-    fn: () => Promise<TeamsFxResult>
+    fn: () => Promise<TeamsFxResult>,
+    properties: { [key: string]: string } = {}
   ): Promise<TeamsFxResult> {
     try {
-      TelemetryHelper.sendStartEvent(stage);
+      TelemetryHelper.sendStartEvent(stage, properties);
       const result = await fn();
-      TelemetryHelper.sendSuccessEvent(stage);
+      TelemetryHelper.sendSuccessEvent(stage, properties);
       return result;
     } catch (e) {
       await ProgressHelper.endAllHandlers(false);
@@ -120,17 +136,17 @@ export class FrontendPlugin implements Plugin, ArmResourcePlugin {
                 e.getInnerError(),
                 e.getInnerError()?.stack
               );
-        TelemetryHelper.sendErrorEvent(stage, error);
+        TelemetryHelper.sendErrorEvent(stage, error, properties);
         return err(error);
       }
 
       if (e instanceof UserError || e instanceof SystemError) {
-        TelemetryHelper.sendErrorEvent(stage, e);
+        TelemetryHelper.sendErrorEvent(stage, e, properties);
         return err(e);
       }
 
       const error = ErrorFactory.SystemError(UnhandledErrorCode, UnhandledErrorMessage, e, e.stack);
-      TelemetryHelper.sendErrorEvent(stage, error);
+      TelemetryHelper.sendErrorEvent(stage, error, properties);
       return err(error);
     }
   }
