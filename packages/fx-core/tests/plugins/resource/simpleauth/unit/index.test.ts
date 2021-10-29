@@ -19,7 +19,6 @@ import { Utils } from "../../../../../src/plugins/resource/simpleauth/utils/comm
 import { PluginContext } from "@microsoft/teamsfx-api";
 import * as uuid from "uuid";
 import { ConstantString, mockSolutionUpdateArmTemplates } from "../../util";
-import { TeamsClientId } from "../../../../../src/common/constants";
 import { isMultiEnvEnabled } from "../../../../../src";
 import { LocalSettingsAuthKeys } from "../../../../../src/common/localSettingsConstants";
 import { getAllowedAppIds } from "../../../../../src/common/tools";

@@ -669,8 +669,10 @@ export function getAllowedAppIds(): string[] {
   return [
     TeamsClientId.MobileDesktop,
     TeamsClientId.Web,
+    OfficeClientId.Desktop,
     OfficeClientId.Web1,
     OfficeClientId.Web2,
+    OutlookClientId.Desktop,
     OutlookClientId.Web,
   ];
 }
