@@ -20,7 +20,6 @@ export class TeamsClientId {
 }
 
 export class OfficeClientId {
-  static readonly Desktop = "0ec893e0-5785-4de6-99da-4ed124e5296c";
   static readonly Web1 = "4345a7b9-9a63-4910-a426-35363201d503";
   static readonly Web2 = "4765445b-32c6-49b0-83e6-1d93765276ca";
 }
