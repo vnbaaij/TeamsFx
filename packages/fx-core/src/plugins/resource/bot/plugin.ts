@@ -25,7 +25,6 @@ import {
   IdentityConstants,
   AzureConstants,
   PathInfo,
-  BotArmOutput,
   Alias,
 } from "./constants";
 import { getZipDeployEndpoint } from "./utils/zipDeploy";
@@ -52,7 +51,7 @@ import { BotAuthCredential } from "./botAuthCredential";
 import { AzureOperations } from "./azureOps";
 import { TokenCredentialsBase } from "@azure/ms-rest-nodeauth";
 import path from "path";
-import { getTemplatesFolder } from "../../..";
+import { getTemplatesFolder } from "../../../folder";
 import { ArmTemplateResult } from "../../../common/armInterface";
 import { Bicep, ConstantString } from "../../../common/constants";
 import {
@@ -62,7 +61,6 @@ import {
   getSubscriptionIdFromResourceId,
   isArmSupportEnabled,
 } from "../../../common";
-import { getArmOutput } from "../utils4v2";
 
 export class TeamsBotImpl {
   // Made config plubic, because expect the upper layer to fill inputs.
@@ -300,40 +298,12 @@ export class TeamsBotImpl {
     );
   }
 
-  private async syncArmOutput(context: PluginContext) {
-    await this.config.restoreConfigFromContext(context);
-
-    this.config.provision.validDomain = getArmOutput(context, BotArmOutput.Domain) as string;
-    this.config.provision.appServicePlan = getArmOutput(
-      context,
-      BotArmOutput.AppServicePlanName
-    ) as string;
-    this.config.provision.botChannelRegName = getArmOutput(
-      context,
-      BotArmOutput.BotServiceName
-    ) as string;
-    this.config.provision.botWebAppResourceId = getArmOutput(
-      context,
-      BotArmOutput.BotWebAppResourceId
-    ) as string;
-    this.config.provision.siteEndpoint = getArmOutput(
-      context,
-      BotArmOutput.WebAppEndpoint
-    ) as string;
-    this.config.provision.skuName = getArmOutput(context, BotArmOutput.WebAppSKU) as string;
-    this.config.provision.siteName = getArmOutput(context, BotArmOutput.WebAppName) as string;
-
-    this.config.saveConfigIntoContext(context);
-  }
-
   public async postProvision(context: PluginContext): Promise<FxResult> {
     Logger.info(Messages.PostProvisioningStart);
 
     this.ctx = context;
 
-    if (isArmSupportEnabled()) {
-      await this.syncArmOutput(context);
-    } else {
+    if (!isArmSupportEnabled()) {
       await this.config.restoreConfigFromContext(context);
 
       // 1. Get required config items from other plugins.
