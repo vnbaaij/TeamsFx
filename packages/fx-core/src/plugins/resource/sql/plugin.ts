@@ -30,17 +30,16 @@ import { TelemetryUtils } from "./utils/telemetryUtils";
 import { adminNameQuestion, adminPasswordQuestion, confirmPasswordQuestion } from "./questions";
 import { Providers, ResourceManagementClientContext } from "@azure/arm-resources";
 import path from "path";
-import { generateBicepFiles, getTemplatesFolder } from "../../..";
+import { generateBicepFiles } from "../../../common/tools";
+import { getTemplatesFolder } from "../../../folder";
 import { Bicep, ConstantString } from "../../../common/constants";
 import { ScaffoldArmTemplateResult } from "../../../common/armInterface";
 import * as fs from "fs-extra";
-import { getArmOutput } from "../utils4v2";
 import {
   getResourceGroupNameFromResourceId,
   getSubscriptionIdFromResourceId,
   isArmSupportEnabled,
 } from "../../../common";
-import { IdentityArmOutput } from "../identity/constants";
 
 export class SqlPluginImpl {
   config: SqlConfig = new SqlConfig();
@@ -348,19 +347,15 @@ export class SqlPluginImpl {
   }
 
   private getIdentity(ctx: PluginContext) {
-    if (isArmSupportEnabled()) {
-      this.config.identity = getArmOutput(ctx, IdentityArmOutput.identityName)!;
-    } else {
-      const identityConfig = ctx.envInfo.state.get(Constants.identityPlugin);
-      this.config.identity = identityConfig!.get(Constants.identityName) as string;
-      if (!this.config.identity) {
-        const error = SqlResultFactory.SystemError(
-          ErrorMessage.SqlGetConfigError.name,
-          ErrorMessage.SqlGetConfigError.message(Constants.identityPlugin, Constants.identityName)
-        );
-        ctx.logProvider?.error(error.message);
-        throw error;
-      }
+    const identityConfig = ctx.envInfo.state.get(Constants.identityPlugin);
+    this.config.identity = identityConfig!.get(Constants.identityName) as string;
+    if (!this.config.identity) {
+      const error = SqlResultFactory.SystemError(
+        ErrorMessage.SqlGetConfigError.name,
+        ErrorMessage.SqlGetConfigError.message(Constants.identityPlugin, Constants.identityName)
+      );
+      ctx.logProvider?.error(error.message);
+      throw error;
     }
   }
 

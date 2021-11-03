@@ -12,27 +12,20 @@ import {
 } from "@microsoft/teamsfx-api";
 
 import { IdentityConfig } from "./config";
-import {
-  Constants,
-  IdentityArmOutput,
-  IdentityBicep,
-  IdentityBicepFile,
-  Telemetry,
-} from "./constants";
+import { Constants, IdentityBicep, IdentityBicepFile, Telemetry } from "./constants";
 import { ContextUtils } from "./utils/contextUtils";
 import { ResultFactory, Result } from "./results";
 import { Message } from "./utils/messages";
 import { TelemetryUtils } from "./utils/telemetryUtil";
 import { formatEndpoint } from "./utils/commonUtils";
-import { generateBicepFiles, getTemplatesFolder } from "../../..";
+import { getTemplatesFolder } from "../../../folder";
 import { AzureResourceSQL } from "../../solution/fx-solution/question";
 import { Service } from "typedi";
 import { ResourcePlugins } from "../../solution/fx-solution/ResourcePluginContainer";
 import { Providers, ResourceManagementClientContext } from "@azure/arm-resources";
 import { Bicep, ConstantString } from "../../../common/constants";
-import { ScaffoldArmTemplateResult, ArmTemplateResult } from "../../../common/armInterface";
+import { ArmTemplateResult } from "../../../common/armInterface";
 import { isArmSupportEnabled } from "../../../common";
-import { getArmOutput } from "../utils4v2";
 import "./v2";
 @Service(ResourcePlugins.IdentityPlugin)
 export class IdentityPlugin implements Plugin {
@@ -66,9 +59,6 @@ export class IdentityPlugin implements Plugin {
   }
 
   async postProvision(ctx: PluginContext): Promise<Result> {
-    if (isArmSupportEnabled()) {
-      this.syncArmOutput(ctx);
-    }
     return ok(undefined);
   }
 
@@ -211,18 +201,6 @@ export class IdentityPlugin implements Plugin {
       );
       throw error;
     }
-  }
-
-  private syncArmOutput(ctx: PluginContext) {
-    ctx.config.set(Constants.identityName, getArmOutput(ctx, IdentityArmOutput.identityName));
-    ctx.config.set(
-      Constants.identityClientId,
-      getArmOutput(ctx, IdentityArmOutput.identityClientId)
-    );
-    ctx.config.set(
-      Constants.identityResourceId,
-      getArmOutput(ctx, IdentityArmOutput.identityResourceId)
-    );
   }
 
   private loadConfig(ctx: PluginContext) {

@@ -2,7 +2,7 @@
 // Licensed under the MIT license.
 import { AzureSolutionSettings, FxError, PluginContext, Result } from "@microsoft/teamsfx-api";
 import { Constants, Messages, Telemetry } from "./constants";
-import { NoConfigError, UnauthenticatedError } from "./errors";
+import { UnauthenticatedError } from "./errors";
 import { ResultFactory } from "./result";
 import { Utils } from "./utils/common";
 import { DialogUtils } from "./utils/dialog";
@@ -10,9 +10,9 @@ import { TelemetryUtils } from "./utils/telemetry";
 import { WebAppClient } from "./webAppClient";
 import * as path from "path";
 import * as fs from "fs-extra";
-import { getTemplatesFolder } from "../../..";
-import { ScaffoldArmTemplateResult, ArmTemplateResult } from "../../../common/armInterface";
-import { generateBicepFiles, isArmSupportEnabled, isMultiEnvEnabled } from "../../../common";
+import { getTemplatesFolder } from "../../../folder";
+import { ArmTemplateResult } from "../../../common/armInterface";
+import { isArmSupportEnabled, isMultiEnvEnabled } from "../../../common";
 import { LocalSettingsAuthKeys } from "../../../common/localSettingsConstants";
 import { Bicep, ConstantString } from "../../../common/constants";
 

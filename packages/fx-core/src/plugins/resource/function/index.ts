@@ -36,7 +36,7 @@ import {
 } from "../../solution/fx-solution/question";
 import { Service } from "typedi";
 import { ResourcePlugins } from "../../solution/fx-solution/ResourcePluginContainer";
-import { isArmSupportEnabled } from "../../..";
+import { isArmSupportEnabled } from "../../../common/tools";
 import "./v2";
 @Service(ResourcePlugins.FunctionPlugin)
 export class FunctionPlugin implements Plugin {

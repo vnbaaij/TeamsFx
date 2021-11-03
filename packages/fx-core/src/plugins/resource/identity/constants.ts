@@ -49,12 +49,6 @@ export class IdentityBicep {
     "userAssignedIdentityProvision.outputs.identityResourceId";
 }
 
-export class IdentityArmOutput {
-  static readonly identityName: string = "identity_identityName";
-  static readonly identityClientId: string = "identity_identityClientId";
-  static readonly identityResourceId: string = "identity_identityResourceId";
-}
-
 export class IdentityBicepFile {
   static readonly moduleTemplateFileName: string = "userAssignedIdentity.template.bicep";
   static readonly moduleTempalteV2Filename: string = "identityProvision.template.v2.bicep";

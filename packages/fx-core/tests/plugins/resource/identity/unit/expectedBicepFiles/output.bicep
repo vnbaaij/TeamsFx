@@ -1,4 +1,6 @@
-
-output identity_identityName string = userAssignedIdentityProvision.outputs.identityName
-output identity_identityClientId string = userAssignedIdentityProvision.outputs.identityClientId
-output identity_identityResourceId string = userAssignedIdentityProvision.outputs.identityResourceId
+output identityOutput object = {
+  teamsFxPluginId: 'fx-resource-identity'
+  identityName: userAssignedIdentityProvision.outputs.identityName
+  identityClientId: userAssignedIdentityProvision.outputs.identityClientId
+  identityResourceId: userAssignedIdentityProvision.outputs.identityResourceId
+}

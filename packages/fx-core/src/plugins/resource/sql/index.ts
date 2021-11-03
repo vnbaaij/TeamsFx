@@ -14,7 +14,7 @@ import {
   UserError,
 } from "@microsoft/teamsfx-api";
 import { Service } from "typedi";
-import { isArmSupportEnabled } from "../../..";
+import { isArmSupportEnabled } from "../../../common/tools";
 import {
   AzureResourceSQL,
   HostTypeOptionAzure,
