@@ -564,7 +564,7 @@ export class TeamsAppSolution implements Solution {
           ctx.ui?.showMessage("info", msg, false, title).then((result) => {
             const userSelected = result.isOk() ? result.value : undefined;
             if (userSelected === title) {
-              ctx.ui!.openUrl(url!);
+              // ctx.ui!.openUrl(url!);
             }
           });
         } else {
